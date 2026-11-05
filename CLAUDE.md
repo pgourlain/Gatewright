@@ -127,6 +127,7 @@ dotnet publish src/Gatewright.Portal -c Release -t:PublishContainer    # builds 
 helm lint deploy/helm/gatewright
 kind create cluster --name gatewright && ./scripts/k8s-e2e.sh  # end-to-end tests
 cd tests/load && ./run.sh [bare-proxy|jwt|apikey-ratelimit|cache|mix]   # k6 load scenarios, see tests/load/README.md
+kind create cluster --name gatewright && ./scripts/k8s-scale-test.sh   # 14.2: scale-out/in, rolling update, config propagation at scale
 ```
 
 The official images (`gatewright-host`, `gatewright-portal`, built above) run as a non-root user on a chiseled base and work with a read-only root filesystem, given three writable mounts: `/tmp`, `/home/app/.aspnet` (ASP.NET Data Protection keys; ephemeral is fine, the data plane is stateless per D1) and wherever `ControlPlane:ConnectionString` points for the SQLite provider. The Helm chart (phase 13) sets `readOnlyRootFilesystem: true` and provides these as `emptyDir` volumes (plus a PVC-backed one for the database path). The root `Dockerfile` (samples, local dev, any project through `PROJECT`/`ASSEMBLY`) is unrelated to this and keeps working as before.
