@@ -288,6 +288,21 @@ kubectl --context "$context" --namespace "$namespace" rollout status deployment 
 errors_after_rollout="$(wc -l <"$error_log")"
 log "Rolling update done: $((errors_after_rollout - errors_after_scale_in)) error(s) during the rolling update"
 
+log "Chaos (14.5): abrupt loss of one data-plane pod (no preStop, no SIGTERM), under traffic"
+victim="$(kubectl --context "$context" --namespace "$namespace" get pods -l app.kubernetes.io/component=dataplane -o jsonpath='{.items[0].metadata.name}')"
+kubectl --context "$context" --namespace "$namespace" delete pod "$victim" --grace-period=0 --force >/dev/null 2>&1
+for _ in $(seq 1 120); do
+  ready="$(kubectl --context "$context" --namespace "$namespace" get deployment "$dp_deployment" -o jsonpath='{.status.readyReplicas}')"
+  [[ "${ready:-0}" == "5" ]] && break
+  sleep 1
+done
+[[ "${ready:-0}" == "5" ]] || { echo "Deployment never recovered to 5 ready replicas after losing a pod (got ${ready:-0})" >&2; exit 1; }
+errors_after_kill=$(($(wc -l <"$error_log")))
+# Requests in flight to the killed pod, or routed to it before kube-proxy drops it, are lost by
+# definition - no graceful path exists. The target is bounded loss plus full recovery, not zero.
+kill_errors=$((errors_after_kill - errors_after_rollout))
+log "Abrupt pod loss: $kill_errors error(s) (bounded loss accepted, full recovery to 5 ready replicas confirmed)"
+
 kill "$traffic_pid" 2>/dev/null || true
 
 total_errors=$(($(wc -l <"$error_log")))  # wc -l pads its output on BSD/macOS; normalize to a bare integer.
@@ -297,7 +312,8 @@ echo "Config propagation at $dp_replicas pods: ${elapsed}s (target < ${converge_
 echo "Errors during scale-out:     $errors_after_scale_out"
 echo "Errors during scale-in:      $((errors_after_scale_in - errors_after_scale_out))"
 echo "Errors during rolling update: $((errors_after_rollout - errors_after_scale_in))"
-echo "Total request errors observed: $total_errors"
+echo "Errors during abrupt pod loss (bounded loss accepted): $kill_errors"
+echo "Total request errors observed (graceful phases): $((total_errors - kill_errors))"
 if [[ "${DEBUG_DUMP:-0}" == "1" ]]; then
   cp "$error_log" /tmp/gatewright-perf-errors.log
   kubectl --context "$context" --namespace "$namespace" get events --sort-by=.lastTimestamp > /tmp/gatewright-perf-events.log
@@ -305,7 +321,7 @@ if [[ "${DEBUG_DUMP:-0}" == "1" ]]; then
 fi
 rm -f "$error_log"
 
-if [[ "$total_errors" != "0" ]]; then
+if [[ "$((total_errors - kill_errors))" != "0" ]]; then
   echo "FAILED: expected zero errors during scale-out/scale-in/rolling update" >&2
   exit 1
 fi
