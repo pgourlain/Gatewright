@@ -31,6 +31,8 @@ public sealed class GatewayHostBuilder
     internal GatewayHostBuilder(WebApplicationBuilder builder)
     {
         Builder = builder;
+        // One fewer header to write on every response, and no "Server: Kestrel" leaked to clients (14.3).
+        builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
         builder.WebHost.UseGatewrightTls(builder.Configuration);
         builder.AddGatewrightTelemetry();
 

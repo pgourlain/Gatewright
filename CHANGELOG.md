@@ -82,6 +82,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New look for the web portal: top bar with tabs, cards, status pills, a policy-trace waterfall in the test console and consistent forms on every page (#S.8)
 - Idle database load of the control plane reduced from about 3 queries per second to 1 (a one-value query; the published snapshot is read only when it changes), and EF Core SQL commands are no longer logged by default (set `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` to `Information` to see them); poll rate is `Gateway:ConfigPollInterval` (#S.6)
 - The default environments are now `dev`, `staging` and `prod` (the second one was named `recette`); an existing development database keeps its old `recette` environment next to the new one (#S.5)
+- Kestrel no longer sends a `Server` response header; backend connections now allow multiple HTTP/2 connections per destination instead of multiplexing everything over one; the `jwt` policy's key lookup and scope/claim checks no longer allocate through LINQ on the hot path (#14.3)
 
 ### Deprecated
 
