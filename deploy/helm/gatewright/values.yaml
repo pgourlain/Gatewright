@@ -1,0 +1,176 @@
+# Default values for the gatewright chart.
+
+nameOverride: ""
+fullnameOverride: ""
+
+# -- "all": a single Deployment runs control plane + data plane in one process (simple, single replica).
+# -- "separate": independent controlPlane and dataPlane Deployments, scaled independently (D3).
+gateway:
+  mode: all
+  # Environment this installation serves (dev, staging, prod...).
+  environment: dev
+  # Extra environment variables (double-underscore config keys), e.g. Gateway__Tls__HttpsPort: "8443".
+  extraEnv: {}
+  # Token protecting GET /gw/config; leave empty to disable the endpoint.
+  diagnosticsToken: ""
+
+image:
+  repository: ghcr.io/pgourlain/gatewright-host
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+
+controlPlane:
+  connectionString: "Data Source=/data/gatewright-controlplane.db"
+  seedSample: false
+  auth:
+    authority: ""
+    audience: ""
+    developmentBypass: false
+  service:
+    type: ClusterIP
+    adminPort: 8081
+    grpcPort: 8082
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+dataPlane:
+  replicaCount: 2
+  service:
+    type: LoadBalancer
+    httpPort: 8080
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 512Mi }
+  # Spreads replicas across nodes/zones so a single node loss never takes down every data plane pod.
+  topologySpreadConstraints:
+    - maxSkew: 1
+      topologyKey: kubernetes.io/hostname
+      whenUnsatisfiable: ScheduleAnyway
+  podDisruptionBudget:
+    enabled: true
+    minAvailable: 1
+  autoscaling:
+    enabled: false
+    minReplicas: 2
+    maxReplicas: 10
+    targetCPUUtilizationPercentage: 70
+    # Requests per second per pod. Requires a custom/external metrics adapter (Prometheus Adapter, KEDA...);
+    # this chart does not install one. Leave empty to scale on CPU only.
+    targetRequestsPerSecond: ""
+  nodeSelector: {}
+  tolerations: []
+  affinity: {}
+
+# Only used when gateway.mode is "all".
+all:
+  service:
+    type: LoadBalancer
+    httpPort: 8080
+  persistence:
+    enabled: true
+    size: 1Gi
+    storageClassName: ""
+  resources:
+    requests: { cpu: 250m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+# Shared secret between control plane and data plane replicas (Distribution:Token/Tokens).
+# Leave empty to let the chart generate one at install time (kept across upgrades).
+distribution:
+  token: ""
+
+portal:
+  enabled: false
+  image:
+    repository: ghcr.io/pgourlain/gatewright-portal
+    tag: ""
+  service:
+    type: ClusterIP
+    port: 8080
+  auth:
+    mode: ""
+    authority: ""
+    clientId: ""
+    clientSecret: ""
+  resources:
+    requests: { cpu: 100m, memory: 256Mi }
+    limits: { memory: 512Mi }
+
+redis:
+  # An external Redis (e.g. Azure Cache for Redis) to enable the shared data plane state (rate limit, quotas, revocations).
+  connectionString: ""
+  dev:
+    # For dev/test only: installs a single, non-persistent redis:7-alpine in this release instead of an external one.
+    # Ignored when redis.connectionString is set.
+    enabled: false
+    image: "redis:7-alpine"
+    resources:
+      requests: { cpu: 50m, memory: 64Mi }
+      limits: { memory: 128Mi }
+
+postgres:
+  # An external PostgreSQL (e.g. Azure Database for PostgreSQL) to use instead of the default SQLite
+  # (ControlPlane:Provider=Postgres).
+  connectionString: ""
+  dev:
+    # For dev/test only: installs a single postgres:17-alpine in this release instead of an external one.
+    # Ignored when postgres.connectionString is set. Change the password for anything that is not a throwaway.
+    enabled: false
+    image: "postgres:17-alpine"
+    database: gatewright
+    username: gatewright
+    password: "gatewright-dev"
+    persistence:
+      enabled: true
+      size: 1Gi
+      storageClassName: ""
+    resources:
+      requests: { cpu: 100m, memory: 256Mi }
+      limits: { memory: 512Mi }
+
+kubernetes:
+  # Lets the control plane discover annotated Services/EndpointSlices and read referenced TLS secrets.
+  enabled: true
+
+rbac:
+  # ClusterRole (Services, EndpointSlices, Secrets - cluster-wide, the discovery API has no narrower scope)
+  # and a namespaced Role (Lease, for leader election) bound to the control plane's ServiceAccount only.
+  # The data plane never mounts a ServiceAccount token at all.
+  create: true
+
+networkPolicy:
+  # Default-deny ingress on every pod except its own service port. Egress is left open (the data plane proxies
+  # arbitrary customer backends; the control plane reaches the Kubernetes API, Redis and/or PostgreSQL).
+  # Requires a CNI that enforces NetworkPolicy (Calico, Cilium, Azure CNI...); a no-op otherwise.
+  enabled: true
+
+azureWorkloadIdentity:
+  # Labels the control plane pod(s) for Azure Workload Identity. Also set serviceAccount.annotations with
+  # "azure.workload.identity/client-id" and label the namespace "azure.workload.identity/use: true".
+  enabled: false
+
+serviceAccount:
+  create: true
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+
+securityContext:
+  runAsNonRoot: true
+  readOnlyRootFilesystem: true
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop: ["ALL"]
+
+podSecurityContext: {}

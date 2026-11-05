@@ -1,0 +1,20 @@
+{{- if eq .Values.gateway.mode "separate" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-dataplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dataplane
+spec:
+  type: {{ .Values.dataPlane.service.type }}
+  {{- if eq .Values.dataPlane.service.type "LoadBalancer" }}
+  externalTrafficPolicy: Local
+  {{- end }}
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "dataplane") .) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.dataPlane.service.httpPort }}
+      targetPort: http
+{{- end }}

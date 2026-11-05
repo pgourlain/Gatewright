@@ -1,0 +1,53 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@inherits LayoutComponentBase
+@inject AuthenticationStateProvider Auth
+@inject TokenProvider Tokens
+@inject IHttpContextAccessor Http
+
+<header class="topbar">
+    <div class="topbar-inner">
+        <div class="brand">
+            <span class="brand-mark"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 12h9" /><path d="M10 6l6 6-6 6" /><path d="M20 5v14" /></svg></span>
+            Gatewright
+        </div>
+        <div class="topbar-spacer"></div>
+        @if (!string.IsNullOrEmpty(user?.Name))
+        {
+            <div class="user-chip who"><span class="avatar" aria-hidden="true">@Initials(user!.Name)</span>@user.Name</div>
+        }
+    </div>
+</header>
+<div class="tabs-wrap">
+    <nav class="tabs" aria-label="Sections">
+        <NavLink class="tab" href="" Match="NavLinkMatch.All">Dashboard</NavLink>
+        <NavLink class="tab" href="apis">APIs</NavLink>
+        <NavLink class="tab" href="import">Import API</NavLink>
+        <NavLink class="tab" href="products">Products</NavLink>
+        <NavLink class="tab" href="subscriptions">Subscriptions</NavLink>
+        <NavLink class="tab" href="revisions">Revisions</NavLink>
+        <NavLink class="tab" href="console">Test console</NavLink>
+    </nav>
+</div>
+<main class="page">@Body</main>
+
+@code {
+    private PortalUser? user;
+
+    private static string Initials(string name)
+    {
+        var parts = name.Split([' ', '.', '-', '_', '@'], StringSplitOptions.RemoveEmptyEntries);
+        return parts.Length == 0 ? "?" : string.Concat(parts.Take(2).Select(p => char.ToUpperInvariant(p[0])));
+    }
+
+    protected override async Task OnInitializedAsync()
+    {
+        var state = await Auth.GetAuthenticationStateAsync();
+        user = PortalUser.From(state.User);
+        var context = Http.HttpContext;
+        if (context is not null && Tokens.AccessToken is null)
+        {
+            Tokens.AccessToken = await Microsoft.AspNetCore.Authentication.AuthenticationHttpContextExtensions.GetTokenAsync(context, "access_token");
+        }
+    }
+}

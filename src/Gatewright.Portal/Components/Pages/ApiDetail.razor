@@ -1,0 +1,169 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/apis/{Name}"
+@using Gatewright.Core.Policies
+@using Gatewright.Abstractions
+@inject IPortalApi Api
+@inject AuthenticationStateProvider Auth
+
+<div class="page-head"><div class="grow"><h2>API @Name</h2><p><a href="apis">All APIs</a></p></div></div>
+<ErrorBanner Message="@error" />
+@if (message is not null) { <div class="ok">@message</div> }
+@if (api is null)
+{
+    <p>@(loading ? "Loading…" : "API not found.")</p>
+}
+else
+{
+    <section class="card" aria-label="Summary">
+        <div class="card-pad api-summary">
+            <div><div class="stat-label">Base path</div><div class="mono">@api.BasePath</div></div>
+            <div><div class="stat-label">Version</div><div>@api.Version</div></div>
+            <div><div class="stat-label">Backend</div><div class="mono">@(api.Backend.Service ?? string.Join(", ", api.Backend.Destinations))</div></div>
+            <div><div class="stat-label">Products</div><div>@foreach (var product in api.Products) { <span class="pill info">@product</span> } @if (api.Products.Count == 0) { <span class="muted">none</span> }</div></div>
+        </div>
+    </section>
+
+    <section class="card" aria-label="Operations">
+        <div class="card-title">Operations <span class="muted">@api.Operations.Count</span></div>
+        <div class="table-wrap">
+            <table id="operations">
+                <thead><tr><th>Operation</th><th>Method</th><th>Path</th><th>Effective policies</th></tr></thead>
+                <tbody>
+                    @foreach (var op in api.Operations)
+                    {
+                        <tr>
+                            <td><strong>@op.Name</strong></td><td><span class="method @op.Method.ToLowerInvariant()">@op.Method</span></td><td class="mono">@op.Path</td>
+                            <td>@Effective(op.Name)</td>
+                        </tr>
+                    }
+                    @if (api.Operations.Count == 0)
+                    {
+                        <tr><td colspan="4" class="muted">No operation declared: the whole base path is proxied to the backend. Import an OpenAPI document to declare operations.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    <section class="card" aria-label="Policies">
+        <div class="card-title">
+            Policies
+            <span class="grow"></span>
+            <div class="field scope-field"><label for="scope" class="sr-only">Scope</label>
+                <select @onchange="OnScopeChanged" id="scope">
+                    <option value="">API @Name</option>
+                    @foreach (var op in api.Operations) { <option value="@op.Name" selected="@(scope == op.Name)">Operation @op.Name</option> }
+                </select>
+            </div>
+            @if (user?.CanEdit == true)
+            {
+                <button id="save" class="primary" type="button" @onclick="SaveAsync">Save to draft</button>
+            }
+        </div>
+        <div class="card-pad">
+            <PolicySetEditor Policies="current" Types="types" CanEdit="user?.CanEdit == true" PoliciesChanged="p => edited = p" />
+        </div>
+    </section>
+}
+
+@code {
+    [Parameter] public string Name { get; set; } = "";
+
+    private string? error;
+    private string? message;
+    private bool loading = true;
+    private ApiResponse? api;
+    private GatewayConfig? draft;
+    private IReadOnlyList<PolicyTypeInfo> types = [];
+    private PortalUser? user;
+    private string scope = "";
+    private PolicySet current = PolicySet.Empty;
+    private PolicySet? edited;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            user = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User);
+            api = await Api.GetApiAsync(Name);
+            draft = await Api.GetDraftAsync();
+            types = await Api.GetPolicyTypesAsync();
+            current = api?.Policies ?? PolicySet.Empty;
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+
+        loading = false;
+    }
+
+    private void OnScopeChanged(ChangeEventArgs e)
+    {
+        scope = e.Value?.ToString() ?? "";
+        edited = null;
+        current = (scope.Length == 0 ? api!.Policies : api!.Operations.First(o => o.Name == scope).Policies) with { };
+    }
+
+    private string Effective(string operation)
+    {
+        if (draft is null)
+        {
+            return "";
+        }
+
+        try
+        {
+            var definition = draft.Apis.First(a => a.Name == Name);
+            var op = definition.Operations.First(o => o.Name == operation);
+            var all = PolicyChainResolver.ResolveAll(draft, definition, op);
+            return string.Join(" | ", all.Where(p => p.Value.Count > 0).Select(p => $"{p.Key}: {string.Join(" → ", p.Value.Select(x => $"{x.Type} ({x.Scope})"))}"));
+        }
+        catch (Exception ex) when (ex is InvalidOperationException or InvalidOperationException)
+        {
+            return ex.Message;
+        }
+    }
+
+    private async Task SaveAsync()
+    {
+        error = null;
+        message = null;
+        if (edited is null || api is null)
+        {
+            return;
+        }
+
+        try
+        {
+            if (scope.Length == 0)
+            {
+                await Api.SaveApiAsync(Name, new ApiRequest
+                {
+                    Name = Name,
+                    DisplayName = api.DisplayName,
+                    BasePath = api.BasePath,
+                    Version = api.Version,
+                    Backend = api.Backend,
+                    Products = [.. api.Products],
+                    Policies = edited,
+                });
+            }
+            else
+            {
+                var op = api.Operations.First(o => o.Name == scope);
+                await Api.SaveOperationAsync(Name, scope, new OperationRequest { Name = scope, Method = op.Method, Path = op.Path, Policies = edited });
+            }
+
+            message = "Saved to the draft. Publish it from the Revisions page.";
+            api = await Api.GetApiAsync(Name);
+            draft = await Api.GetDraftAsync();
+            current = (scope.Length == 0 ? api!.Policies : api!.Operations.First(o => o.Name == scope).Policies) with { };
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

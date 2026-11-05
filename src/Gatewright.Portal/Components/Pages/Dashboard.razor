@@ -1,0 +1,114 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/"
+@inject IPortalApi Api
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Dashboard</h2>
+        <p>State of the gateways and of the configuration you are editing.</p>
+    </div>
+</div>
+<ErrorBanner Message="@error" />
+@if (environments is not null && nodes is not null)
+{
+    <section class="stats" aria-label="Summary">
+        <div class="card stat"><div class="stat-label">Published environments</div><div class="stat-value">@environments.Count(e => e.Current is not null) / @environments.Count</div><div class="stat-note">with an active version</div></div>
+        <div class="card stat"><div class="stat-label">Data plane nodes</div><div class="stat-value">@nodes.Count(n => n.InSync) / @nodes.Count</div><div class="stat-note">in sync with the latest version</div></div>
+        <div class="card stat"><div class="stat-label">Connected</div><div class="stat-value">@nodes.Count(n => n.Connected) / @nodes.Count</div><div class="stat-note">nodes with a live stream</div></div>
+        <div class="card stat">
+            <div class="stat-label">Draft validation</div>
+            <div class="stat-value" style="color: @(valid == true ? "var(--ok-fg)" : "var(--err-fg)")">@(valid is null ? "-" : valid.Value ? "Valid" : "Errors")</div>
+            <div class="stat-note">@(valid == false ? validationErrors.Count + " problem(s)" : "checked before any publication")</div>
+        </div>
+    </section>
+}
+@if (nodes is not null)
+{
+    <section class="card" aria-label="Data plane nodes">
+        <div class="card-title">Data plane nodes <span class="muted">@nodes.Count node(s)</span></div>
+        <div class="table-wrap">
+            <table id="nodes">
+                <thead><tr><th>Node</th><th>Environment</th><th>Applied</th><th>Latest</th><th>State</th><th>Last error</th></tr></thead>
+                <tbody>
+                    @foreach (var node in nodes)
+                    {
+                        <tr class="@(node.InSync ? "" : "behind")">
+                            <td class="mono">@node.NodeId</td><td>@node.Environment</td><td class="mono">@node.AppliedVersion</td><td class="mono">@node.LatestVersion</td>
+                            <td>
+                                <span class="pill @(node.InSync ? "ok" : "warn")"><span class="dot"></span>@(node.InSync ? "in sync" : "behind")</span>
+                                <span class="pill @(node.Connected ? "neutral" : "err")">@(node.Connected ? "connected" : "disconnected")</span>
+                            </td>
+                            <td class="muted">@node.LastError</td>
+                        </tr>
+                    }
+                    @if (nodes.Count == 0)
+                    {
+                        <tr><td colspan="6" class="muted">No node has connected yet.</td></tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+@if (environments is not null)
+{
+    <section class="card" aria-label="Environments">
+        <div class="card-title">Environments</div>
+        <div class="table-wrap">
+            <table id="environments">
+                <thead><tr><th>Environment</th><th>Active configuration version</th></tr></thead>
+                <tbody>
+                    @foreach (var (name, current) in environments)
+                    {
+                        <tr>
+                            <td><strong>@name</strong></td>
+                            <td>@if (current is null) { <span class="pill neutral">nothing published</span> } else { <span class="mono">@current</span> }</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+@if (valid is not null)
+{
+    <section class="card" aria-label="Draft validation">
+        <div class="card-title">Draft validation</div>
+        <div class="card-pad">
+            @if (valid.Value)
+            {
+                <div class="ok">The draft configuration is valid.</div>
+            }
+            else
+            {
+                <div class="error" id="validation-errors">
+                    <ul>@foreach (var item in validationErrors) { <li>@item</li> }</ul>
+                </div>
+            }
+        </div>
+    </section>
+}
+
+@code {
+    private string? error;
+    private IReadOnlyList<(string Name, long? Current)>? environments;
+    private IReadOnlyList<NodeResponse>? nodes;
+    private bool? valid;
+    private IReadOnlyList<string> validationErrors = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            environments = await Api.GetEnvironmentsAsync();
+            nodes = await Api.GetNodesAsync();
+            (var ok, validationErrors) = await Api.ValidateDraftAsync();
+            valid = ok;
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

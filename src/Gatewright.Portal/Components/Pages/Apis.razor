@@ -1,0 +1,63 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/apis"
+@inject IPortalApi Api
+
+<div class="page-head">
+    <div class="grow">
+        <h2>APIs</h2>
+        <p>Everything the gateway exposes, with the policies that apply to each operation.</p>
+    </div>
+    <a class="btn primary" href="import">Import OpenAPI</a>
+</div>
+<ErrorBanner Message="@error" />
+<section class="card" aria-label="Filters">
+    <div class="form-row">
+        <div class="field" style="flex: 1 1 320px"><label for="search">Search</label><input id="search" class="input" type="search" placeholder="Search APIs, paths…" @bind="search" @bind:event="oninput" /></div>
+    </div>
+    <div class="muted" style="padding: 0 20px 16px">Showing <strong style="color: var(--text)">@Filtered().Count()</strong> of <strong style="color: var(--text)">@apis.Count</strong> APIs</div>
+</section>
+<section class="card" aria-label="API list">
+    <div class="table-wrap">
+        <table id="apis">
+            <thead><tr><th>Name</th><th>Base path</th><th>Version</th><th>Backend</th><th>Operations</th><th>Products</th></tr></thead>
+            <tbody>
+                @foreach (var api in Filtered())
+                {
+                    <tr>
+                        <td><a href="apis/@api.Name"><strong>@api.Name</strong></a></td>
+                        <td class="mono">@api.BasePath</td>
+                        <td>@api.Version</td>
+                        <td class="mono">@(api.Backend.Service ?? string.Join(", ", api.Backend.Destinations))</td>
+                        <td>@api.Operations.Count</td>
+                        <td>@foreach (var product in api.Products) { <span class="pill info">@product</span> }</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private string? error;
+    private string search = "";
+    private IReadOnlyList<ApiResponse> apis = [];
+
+    private IEnumerable<ApiResponse> Filtered() => apis.Where(a =>
+        search.Length == 0
+        || a.Name.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || a.BasePath.Contains(search, StringComparison.OrdinalIgnoreCase)
+        || a.Operations.Any(o => o.Path.Contains(search, StringComparison.OrdinalIgnoreCase)));
+
+    protected override async Task OnInitializedAsync()
+    {
+        try
+        {
+            apis = await Api.GetApisAsync();
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

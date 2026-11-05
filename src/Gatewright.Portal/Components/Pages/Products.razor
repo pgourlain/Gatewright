@@ -1,0 +1,103 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/products"
+@inject IPortalApi Api
+@inject AuthenticationStateProvider Auth
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Products</h2>
+        <p>What a subscription gives access to.</p>
+    </div>
+</div>
+<ErrorBanner Message="@error" />
+<section class="card" aria-label="Products">
+    <div class="table-wrap">
+        <table id="products">
+            <thead><tr><th>Product</th><th>Subscription required</th><th>APIs</th><th>Plans</th></tr></thead>
+            <tbody>
+                @foreach (var product in products)
+                {
+                    <tr>
+                        <td><strong>@product.Name</strong></td>
+                        <td><span class="pill @(product.RequiresSubscription ? "ok" : "neutral")">@(product.RequiresSubscription ? "yes" : "no")</span></td>
+                        <td class="mono">@string.Join(", ", product.Apis)</td>
+                        <td>@string.Join(", ", product.Plans)</td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+@if (canEdit)
+{
+    <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+        <section class="card" aria-label="New product">
+            <div class="card-title">New product</div>
+            <div class="form-row">
+                <div class="field"><label for="newProduct">Name</label><input id="newProduct" @bind="newName" placeholder="name" /></div>
+                <label class="check"><input type="checkbox" @bind="requiresSubscription" /> subscription required</label>
+                <button id="createProduct" class="primary" type="button" @onclick="CreateAsync">Create</button>
+            </div>
+        </section>
+        <section class="card" aria-label="New plan">
+            <div class="card-title">New plan</div>
+            <div class="form-row">
+                <div class="field"><label for="planProduct">Product</label>
+                    <select id="planProduct" @bind="planProduct">
+                        <option value=""></option>
+                        @foreach (var product in products) { <option value="@product.Name">@product.Name</option> }
+                    </select>
+                </div>
+                <div class="field"><label for="newPlan">Plan</label><input id="newPlan" @bind="newPlan" placeholder="plan name" /></div>
+                <button id="createPlan" type="button" @onclick="CreatePlanAsync">Add plan</button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private string? error;
+    private IReadOnlyList<ProductResponse> products = [];
+    private bool canEdit;
+    private string newName = "";
+    private bool requiresSubscription;
+    private string planProduct = "";
+    private string newPlan = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        canEdit = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanEdit;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try { products = await Api.GetProductsAsync(); }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private async Task CreateAsync()
+    {
+        error = null;
+        try
+        {
+            await Api.SaveProductAsync(newName, new ProductRequest { Name = newName, RequiresSubscription = requiresSubscription }, create: true);
+            newName = "";
+            await LoadAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private async Task CreatePlanAsync()
+    {
+        error = null;
+        try
+        {
+            await Api.SavePlanAsync(planProduct, newPlan, new PlanRequest { Name = newPlan });
+            newPlan = "";
+            await LoadAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+}

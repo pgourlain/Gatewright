@@ -1,0 +1,46 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Folder Name="/samples/">
+    <Project Path="samples/backend-orders/backend-orders.csproj" />
+    <Project Path="samples/custom-policy/custom-policy.csproj" />
+  </Folder>
+  <Folder Name="/src/">
+    <Project Path="src/Gatewright.Abstractions/Gatewright.Abstractions.csproj" />
+    <Project Path="src/Gatewright.Cli/Gatewright.Cli.csproj" />
+    <Project Path="src/Gatewright.ControlPlane/Gatewright.ControlPlane.csproj" />
+    <Project Path="src/Gatewright.Core/Gatewright.Core.csproj" />
+    <Project Path="src/Gatewright.DataPlane/Gatewright.DataPlane.csproj" />
+    <Project Path="src/Gatewright.Distribution/Gatewright.Distribution.csproj" />
+    <Project Path="src/Gatewright.Exposure/Gatewright.Exposure.csproj" />
+    <Project Path="src/Gatewright.Host/Gatewright.Host.csproj" />
+    <Project Path="src/Gatewright.Kubernetes/Gatewright.Kubernetes.csproj" />
+    <Project Path="src/Gatewright.Policies/Gatewright.Policies.csproj" />
+    <Project Path="src/Gatewright.Portal/Gatewright.Portal.csproj" />
+    <Project Path="src/Gatewright.Sdk/Gatewright.Sdk.csproj" />
+    <Project Path="src/Gatewright.State.Redis/Gatewright.State.Redis.csproj" />
+    <Project Path="src/Gatewright.Testing/Gatewright.Testing.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/Gatewright.Abstractions.Tests/Gatewright.Abstractions.Tests.csproj" />
+    <Project Path="tests/Gatewright.Cli.Tests/Gatewright.Cli.Tests.csproj" />
+    <Project Path="tests/Gatewright.ControlPlane.Tests/Gatewright.ControlPlane.Tests.csproj" />
+    <Project Path="tests/Gatewright.Core.Tests/Gatewright.Core.Tests.csproj" />
+    <Project Path="tests/Gatewright.DataPlane.Tests/Gatewright.DataPlane.Tests.csproj" />
+    <Project Path="tests/Gatewright.Distribution.Tests/Gatewright.Distribution.Tests.csproj" />
+    <Project Path="tests/Gatewright.Exposure.Tests/Gatewright.Exposure.Tests.csproj" />
+    <Project Path="tests/Gatewright.Host.Tests/Gatewright.Host.Tests.csproj" />
+    <Project Path="tests/Gatewright.IntegrationTests/Gatewright.IntegrationTests.csproj" />
+    <Project Path="tests/Gatewright.K8sTests/Gatewright.K8sTests.csproj" />
+    <Project Path="tests/Gatewright.Kubernetes.Tests/Gatewright.Kubernetes.Tests.csproj" />
+    <Project Path="tests/Gatewright.Policies.Tests/Gatewright.Policies.Tests.csproj" />
+    <Project Path="tests/Gatewright.Portal.Tests/Gatewright.Portal.Tests.csproj" />
+    <Project Path="tests/Gatewright.Samples.Tests/Gatewright.Samples.Tests.csproj" />
+    <Project Path="tests/Gatewright.Sdk.Tests/Gatewright.Sdk.Tests.csproj" />
+    <Project Path="tests/Gatewright.State.Redis.Tests/Gatewright.State.Redis.Tests.csproj" />
+    <Project Path="tests/Gatewright.Testing.Tests/Gatewright.Testing.Tests.csproj" />
+  </Folder>
+</Solution>

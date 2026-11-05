@@ -1,0 +1,11 @@
+{
+  "version": 1,
+  "apis": [
+    {
+      "name": "orders",
+      "basePath": "/orders",
+      "version": "v1",
+      "backend": { "destinations": ["http://localhost:5101"] }
+    }
+  ]
+}

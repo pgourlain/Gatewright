@@ -1,0 +1,114 @@
+{
+  "format": "gatewright/v1",
+  "config": {
+    "version": 1,
+    "products": [
+      {
+        "name": "starter",
+        "requiresSubscription": true
+      },
+      {
+        "name": "premium",
+        "requiresSubscription": true
+      }
+    ],
+    "apis": [
+      {
+        "name": "orders",
+        "basePath": "/orders",
+        "version": "v1",
+        "products": [
+          "starter",
+          "premium"
+        ],
+        "backend": {
+          "destinations": [
+            "http://orders:8080"
+          ]
+        },
+        "policies": {
+          "inbound": [
+            {
+              "type": "apiKey",
+              "config": {
+                "products": [
+                  "starter",
+                  "premium"
+                ]
+              }
+            },
+            {
+              "type": "rateLimit",
+              "config": {
+                "limit": 5,
+                "periodSeconds": 60,
+                "partitionBy": "subscription"
+              }
+            }
+          ],
+          "outbound": [
+            {
+              "type": "headers",
+              "config": {
+                "response": {
+                  "set": {
+                    "x-subscription": "{subscription.id}",
+                    "x-plan": "{subscription.plan}",
+                    "x-product": "{subscription.product}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      },
+      {
+        "name": "analytics",
+        "basePath": "/analytics",
+        "version": "v1",
+        "products": [
+          "premium"
+        ],
+        "backend": {
+          "destinations": [
+            "http://orders:8080"
+          ]
+        },
+        "policies": {
+          "inbound": [
+            {
+              "type": "apiKey",
+              "config": {
+                "products": [
+                  "premium"
+                ]
+              }
+            },
+            {
+              "type": "rateLimit",
+              "config": {
+                "limit": 100,
+                "periodSeconds": 60,
+                "partitionBy": "subscription"
+              }
+            }
+          ],
+          "outbound": [
+            {
+              "type": "headers",
+              "config": {
+                "response": {
+                  "set": {
+                    "x-subscription": "{subscription.id}",
+                    "x-plan": "{subscription.plan}",
+                    "x-product": "{subscription.product}"
+                  }
+                }
+              }
+            }
+          ]
+        }
+      }
+    ]
+  }
+}

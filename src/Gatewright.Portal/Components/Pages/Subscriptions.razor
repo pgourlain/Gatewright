@@ -1,0 +1,139 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/subscriptions"
+@inject IPortalApi Api
+@inject AuthenticationStateProvider Auth
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Subscriptions and keys</h2>
+        <p>Who can call which product, and the API keys that prove it. Keys are shown once and stored hashed.</p>
+    </div>
+</div>
+<ErrorBanner Message="@error" />
+@if (issued is not null)
+{
+    <div class="ok" id="issued" role="status">
+        <span>Key <strong>@issued.Label</strong> (shown once, copy it now):</span>
+        <code class="secret">@issued.Key</code>
+    </div>
+}
+<section class="card" aria-label="Subscriptions">
+    <div class="card-title">Subscriptions <span class="muted">@subscriptions.Count subscription(s)</span></div>
+    <div class="table-wrap">
+        <table id="subscriptions">
+            <thead><tr><th>Subscription</th><th>Consumer</th><th>Product</th><th>Plan</th><th>Active</th><th>Keys</th></tr></thead>
+            <tbody>
+                @foreach (var subscription in subscriptions)
+                {
+                    var name = subscription.Name;
+                    <tr data-subscription="@name">
+                        <td class="mono"><strong>@name</strong></td><td>@subscription.Consumer</td><td><span class="pill info">@subscription.Product</span></td><td>@subscription.Plan</td>
+                        <td><span class="pill @(subscription.Active ? "ok" : "neutral")">@(subscription.Active ? "yes" : "no")</span></td>
+                        <td>
+                            @foreach (var label in new[] { "primary", "secondary" })
+                            {
+                                var key = subscription.Keys.FirstOrDefault(k => k.Label == label && k.RevokedAt is null);
+                                <div class="actions" style="margin: 2px 0">
+                                    <span class="muted" style="min-width: 70px">@label:</span>
+                                    @if (key is null)
+                                    {
+                                        <span class="pill neutral">none</span>
+                                        @if (canEdit) { <button type="button" class="create-@label btn small" @onclick="() => IssueAsync(name, label, false)">Generate</button> }
+                                    }
+                                    else
+                                    {
+                                        <span class="badge">active</span>
+                                        @if (canEdit)
+                                        {
+                                            <button type="button" class="rotate-@label btn small" @onclick="() => IssueAsync(name, label, true)">Rotate</button>
+                                            <button type="button" class="revoke-@label btn small danger" @onclick="() => RevokeAsync(name, label)">Revoke</button>
+                                        }
+                                    }
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+</section>
+@if (canEdit)
+{
+    <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr)">
+        <section class="card" aria-label="New consumer">
+            <div class="card-title">New consumer</div>
+            <div class="form-row">
+                <div class="field"><label for="newConsumer">Name</label><input id="newConsumer" @bind="newConsumer" placeholder="name" /></div>
+                <button id="createConsumer" class="primary" type="button" @onclick="CreateConsumerAsync">Create</button>
+            </div>
+        </section>
+        <section class="card" aria-label="New subscription">
+            <div class="card-title">New subscription</div>
+            <div class="form-row">
+                <div class="field"><label for="subName">Name</label><input id="subName" @bind="subName" placeholder="name" /></div>
+                <div class="field"><label for="subConsumer">Consumer</label><select id="subConsumer" @bind="subConsumer"><option value=""></option>@foreach (var c in consumers) { <option value="@c.Name">@c.Name</option> }</select></div>
+                <div class="field"><label for="subProduct">Product</label><select id="subProduct" @bind="subProduct"><option value=""></option>@foreach (var p in products) { <option value="@p.Name">@p.Name</option> }</select></div>
+                <button id="createSubscription" class="primary" type="button" @onclick="CreateSubscriptionAsync">Create</button>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private string? error;
+    private bool canEdit;
+    private KeyIssued? issued;
+    private IReadOnlyList<SubscriptionResponse> subscriptions = [];
+    private IReadOnlyList<ConsumerResponse> consumers = [];
+    private IReadOnlyList<ProductResponse> products = [];
+    private string newConsumer = "";
+    private string subName = "";
+    private string subConsumer = "";
+    private string subProduct = "";
+
+    protected override async Task OnInitializedAsync()
+    {
+        canEdit = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanEdit;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            subscriptions = await Api.GetSubscriptionsAsync();
+            consumers = await Api.GetConsumersAsync();
+            products = await Api.GetProductsAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private async Task Run(Func<Task> action)
+    {
+        error = null;
+        try
+        {
+            await action();
+            await LoadAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private Task IssueAsync(string subscription, string label, bool rotate) => Run(async () => issued = await Api.IssueKeyAsync(subscription, label, rotate));
+
+    private Task RevokeAsync(string subscription, string label) => Run(async () =>
+    {
+        issued = null;
+        await Api.RevokeKeyAsync(subscription, label);
+    });
+
+    private Task CreateConsumerAsync() => Run(async () =>
+    {
+        await Api.CreateConsumerAsync(new ConsumerRequest { Name = newConsumer });
+        newConsumer = "";
+    });
+
+    private Task CreateSubscriptionAsync() => Run(() => Api.CreateSubscriptionAsync(new SubscriptionRequest { Name = subName, Consumer = subConsumer, Product = subProduct }));
+}

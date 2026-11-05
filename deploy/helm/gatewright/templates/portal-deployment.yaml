@@ -1,0 +1,97 @@
+{{- if .Values.portal.enabled }}
+{{- $adminUrl := printf "http://%s-controlplane:%d" (include "gatewright.fullname" .) (.Values.controlPlane.service.adminPort | int) }}
+{{- $gatewayUrl := printf "http://%s-dataplane:%d" (include "gatewright.fullname" .) (.Values.dataPlane.service.httpPort | int) }}
+{{- if eq .Values.gateway.mode "all" }}
+{{- $adminUrl = printf "http://%s-all:%d" (include "gatewright.fullname" .) (.Values.all.service.httpPort | int) }}
+{{- $gatewayUrl = $adminUrl }}
+{{- end }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatewright.fullname" . }}-portal
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "portal") .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gatewright.labels" . | nindent 8 }}
+        app.kubernetes.io/component: portal
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: portal
+          image: "{{ .Values.portal.image.repository }}:{{ .Values.portal.image.tag | default $.Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.portal.service.port }}
+          env:
+            - name: Portal__AdminApiBaseUrl
+              value: {{ $adminUrl | quote }}
+            - name: Portal__GatewayBaseUrl
+              value: {{ $gatewayUrl | quote }}
+            {{- if .Values.gateway.diagnosticsToken }}
+            - name: Portal__GatewayDiagnosticsToken
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gatewright.fullname" . }}-secrets
+                  key: diagnosticsToken
+            {{- end }}
+            {{- if .Values.portal.auth.mode }}
+            - name: Portal__Auth__Mode
+              value: {{ .Values.portal.auth.mode | quote }}
+            {{- end }}
+            {{- if .Values.portal.auth.authority }}
+            - name: Portal__Auth__Authority
+              value: {{ .Values.portal.auth.authority | quote }}
+            - name: Portal__Auth__ClientId
+              value: {{ .Values.portal.auth.clientId | quote }}
+            {{- if .Values.portal.auth.clientSecret }}
+            - name: Portal__Auth__ClientSecret
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "gatewright.fullname" . }}-portal-auth
+                  key: clientSecret
+            {{- end }}
+            {{- end }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: dataprotection-keys
+              mountPath: /home/app/.aspnet
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          resources:
+            {{- toYaml .Values.portal.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: dataprotection-keys
+          emptyDir: {}
+{{- end }}

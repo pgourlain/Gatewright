@@ -1,0 +1,153 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+
+<div class="schema-form">
+    @foreach (var property in Properties())
+    {
+        var name = property.Name;
+        var type = TypeOf(property.Value);
+        var isInteger = type == "integer";
+        <div class="field @(type == "boolean" ? "field-check" : "")" data-field="@name">
+            <label>@name@(IsRequired(name) ? " *" : "")</label>
+            @if (property.Value.TryGetProperty("enum", out var options))
+            {
+                <select @onchange="e => Set(name, e.Value?.ToString())" value="@Text(name)">
+                    <option value=""></option>
+                    @foreach (var option in options.EnumerateArray())
+                    {
+                        <option value="@option.ToString()" selected="@(option.ToString() == Text(name))">@option.ToString()</option>
+                    }
+                </select>
+            }
+            else if (type == "boolean")
+            {
+                <input type="checkbox" checked="@(Value[name]?.GetValue<bool>() ?? false)" @onchange="e => SetNode(name, JsonValue.Create((bool)e.Value!))" />
+            }
+            else if (type is "integer" or "number")
+            {
+                <input type="number" step="@(isInteger ? "1" : "any")" value="@Text(name)" @onchange="e => SetNumber(name, e.Value?.ToString(), isInteger)" />
+            }
+            else if (type == "string")
+            {
+                <input type="text" value="@Text(name)" @onchange="e => Set(name, e.Value?.ToString())" />
+            }
+            else
+            {
+                <textarea rows="3" @onchange="e => SetJson(name, e.Value?.ToString())">@(Value[name]?.ToJsonString())</textarea>
+            }
+            @if (property.Value.TryGetProperty("description", out var description))
+            {
+                <small>@description.GetString()</small>
+            }
+        </div>
+    }
+    @if (!Properties().Any())
+    {
+        <textarea rows="4" class="raw" @onchange="e => SetRaw(e.Value?.ToString())">@Value.ToJsonString()</textarea>
+    }
+</div>
+
+@code {
+    [Parameter, EditorRequired] public JsonElement Schema { get; set; }
+    [Parameter, EditorRequired] public JsonObject Value { get; set; } = new();
+    [Parameter] public EventCallback<JsonObject> ValueChanged { get; set; }
+
+    private IEnumerable<JsonProperty> Properties() =>
+        Schema.ValueKind == JsonValueKind.Object && Schema.TryGetProperty("properties", out var properties) ? properties.EnumerateObject() : [];
+
+    private bool IsRequired(string name) =>
+        Schema.TryGetProperty("required", out var required) && required.EnumerateArray().Any(r => r.GetString() == name);
+
+    private static string TypeOf(JsonElement property)
+    {
+        if (!property.TryGetProperty("type", out var type))
+        {
+            return "json";
+        }
+
+        if (type.ValueKind == JsonValueKind.Array)
+        {
+            return type.EnumerateArray().Select(t => t.GetString()).FirstOrDefault(t => t != "null") ?? "json";
+        }
+
+        return type.GetString() ?? "json";
+    }
+
+    private string Text(string name) => Value[name] is JsonValue v ? v.ToString() : "";
+
+    private Task Set(string name, string? text)
+    {
+        if (string.IsNullOrEmpty(text))
+        {
+            Value.Remove(name);
+        }
+        else
+        {
+            Value[name] = text;
+        }
+
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task SetNode(string name, JsonNode? node)
+    {
+        Value[name] = node;
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task SetNumber(string name, string? text, bool integer)
+    {
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            Value.Remove(name);
+        }
+        else if (integer && long.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var whole))
+        {
+            Value[name] = whole;
+        }
+        else if (double.TryParse(text, System.Globalization.CultureInfo.InvariantCulture, out var number))
+        {
+            Value[name] = number;
+        }
+
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task SetJson(string name, string? text)
+    {
+        try
+        {
+            Value[name] = string.IsNullOrWhiteSpace(text) ? null : JsonNode.Parse(text);
+        }
+        catch (JsonException)
+        {
+            // Invalid JSON is ignored until it parses.
+        }
+
+        return ValueChanged.InvokeAsync(Value);
+    }
+
+    private Task SetRaw(string? text)
+    {
+        try
+        {
+            if (JsonNode.Parse(text ?? "{}") is JsonObject parsed)
+            {
+                Value.Clear();
+                foreach (var (key, node) in parsed.ToList())
+                {
+                    parsed.Remove(key);
+                    Value[key] = node;
+                }
+            }
+        }
+        catch (JsonException)
+        {
+            // Ignored until valid.
+        }
+
+        return ValueChanged.InvokeAsync(Value);
+    }
+}

@@ -1,0 +1,33 @@
+{{- if and (eq .Values.gateway.mode "separate") .Values.dataPlane.autoscaling.enabled }}
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: {{ include "gatewright.fullname" . }}-dataplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dataplane
+spec:
+  scaleTargetRef:
+    apiVersion: apps/v1
+    kind: Deployment
+    name: {{ include "gatewright.fullname" . }}-dataplane
+  minReplicas: {{ .Values.dataPlane.autoscaling.minReplicas }}
+  maxReplicas: {{ .Values.dataPlane.autoscaling.maxReplicas }}
+  metrics:
+    - type: Resource
+      resource:
+        name: cpu
+        target:
+          type: Utilization
+          averageUtilization: {{ .Values.dataPlane.autoscaling.targetCPUUtilizationPercentage }}
+    {{- if .Values.dataPlane.autoscaling.targetRequestsPerSecond }}
+    # Requires a custom/external metrics adapter (Prometheus Adapter, KEDA...) exposing this metric; not installed by this chart.
+    - type: Pods
+      pods:
+        metric:
+          name: http_requests_per_second
+        target:
+          type: AverageValue
+          averageValue: {{ .Values.dataPlane.autoscaling.targetRequestsPerSecond | quote }}
+    {{- end }}
+{{- end }}

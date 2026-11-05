@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "backend-orders": {
+      "commandName": "Project",
+      "applicationUrl": "http://localhost:5101"
+    }
+  }
+}

@@ -1,0 +1,37 @@
+# Two independent gateways share one rate-limit budget through Redis.
+x-gateway: &gateway
+  image: gatewright/host:dev
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+  command: ["--Gateway:Mode=all", "--Gateway:ConfigFile=/config/gateway.json"]
+  environment:
+    Redis__ConnectionString: redis:6379
+  volumes:
+    - ./gateway.json:/config/gateway.json:ro
+  depends_on:
+    - redis
+    - orders
+
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+
+  gateway-1:
+    <<: *gateway
+    ports:
+      - "8080:8080"
+
+  gateway-2:
+    <<: *gateway
+    ports:
+      - "8090:8080"

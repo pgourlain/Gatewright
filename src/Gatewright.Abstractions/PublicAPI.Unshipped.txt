@@ -1,0 +1,88 @@
+#nullable enable
+Gatewright.Abstractions.ApiInfo
+Gatewright.Abstractions.ApiInfo.ApiInfo(string! name, string! basePath, string? version = null) -> void
+Gatewright.Abstractions.ApiInfo.BasePath.get -> string!
+Gatewright.Abstractions.ApiInfo.Name.get -> string!
+Gatewright.Abstractions.ApiInfo.Version.get -> string?
+Gatewright.Abstractions.BackendCall
+Gatewright.Abstractions.GatewayContext
+Gatewright.Abstractions.GatewayContext.Api.get -> Gatewright.Abstractions.ApiInfo!
+Gatewright.Abstractions.GatewayContext.CancellationToken.get -> System.Threading.CancellationToken
+Gatewright.Abstractions.GatewayContext.CancellationToken.set -> void
+Gatewright.Abstractions.GatewayContext.Failure.get -> Gatewright.Abstractions.PolicyFailure?
+Gatewright.Abstractions.GatewayContext.Failure.set -> void
+Gatewright.Abstractions.GatewayContext.GatewayContext(Microsoft.AspNetCore.Http.HttpContext! httpContext, string! routeId, Gatewright.Abstractions.ApiInfo! api, Gatewright.Abstractions.OperationInfo? operation = null, System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> void
+Gatewright.Abstractions.GatewayContext.HttpContext.get -> Microsoft.AspNetCore.Http.HttpContext!
+Gatewright.Abstractions.GatewayContext.Identity.get -> System.Security.Claims.ClaimsPrincipal?
+Gatewright.Abstractions.GatewayContext.Identity.set -> void
+Gatewright.Abstractions.GatewayContext.Operation.get -> Gatewright.Abstractions.OperationInfo?
+Gatewright.Abstractions.GatewayContext.Phase.get -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.GatewayContext.Phase.set -> void
+Gatewright.Abstractions.GatewayContext.RouteId.get -> string!
+Gatewright.Abstractions.GatewayContext.Subscription.get -> Gatewright.Abstractions.SubscriptionInfo?
+Gatewright.Abstractions.GatewayContext.Subscription.set -> void
+Gatewright.Abstractions.GatewayContext.Variables.get -> System.Collections.Generic.IDictionary<string!, object?>!
+Gatewright.Abstractions.IBackendPolicyInstance
+Gatewright.Abstractions.IBackendPolicyInstance.InvokeBackendAsync(Gatewright.Abstractions.GatewayContext! context, Gatewright.Abstractions.BackendCall! invokeBackend) -> System.Threading.Tasks.ValueTask<Gatewright.Abstractions.PolicyResult!>
+Gatewright.Abstractions.IGatewayPolicy
+Gatewright.Abstractions.IGatewayPolicy.Compile(System.Text.Json.JsonElement config, Gatewright.Abstractions.PolicyCompilationContext! context) -> Gatewright.Abstractions.IPolicyInstance!
+Gatewright.Abstractions.IGatewayPolicy.ConfigSchema.get -> System.Text.Json.JsonElement
+Gatewright.Abstractions.IGatewayPolicy.Phases.get -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.IGatewayPolicy.Type.get -> string!
+Gatewright.Abstractions.IPolicyInstance
+Gatewright.Abstractions.IPolicyInstance.InvokeAsync(Gatewright.Abstractions.GatewayContext! context) -> System.Threading.Tasks.ValueTask<Gatewright.Abstractions.PolicyResult!>
+Gatewright.Abstractions.OperationInfo
+Gatewright.Abstractions.OperationInfo.Method.get -> string!
+Gatewright.Abstractions.OperationInfo.Name.get -> string!
+Gatewright.Abstractions.OperationInfo.OperationInfo(string! name, string! method, string! pathTemplate) -> void
+Gatewright.Abstractions.OperationInfo.PathTemplate.get -> string!
+Gatewright.Abstractions.PolicyCompilationContext
+Gatewright.Abstractions.PolicyCompilationContext.PolicyCompilationContext(System.IServiceProvider! services, string! scope) -> void
+Gatewright.Abstractions.PolicyCompilationContext.Scope.get -> string!
+Gatewright.Abstractions.PolicyCompilationContext.Services.get -> System.IServiceProvider!
+Gatewright.Abstractions.PolicyFailure
+Gatewright.Abstractions.PolicyFailure.Exception.get -> System.Exception?
+Gatewright.Abstractions.PolicyFailure.IsTimeout.get -> bool
+Gatewright.Abstractions.PolicyFailure.Phase.get -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyFailure.PolicyFailure(string! policyType, Gatewright.Abstractions.PolicyPhase phase, bool isTimeout, System.Exception? exception) -> void
+Gatewright.Abstractions.PolicyFailure.PolicyType.get -> string!
+Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyPhase.Backend = 2 -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyPhase.Inbound = 1 -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyPhase.None = 0 -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyPhase.OnError = 8 -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyPhase.Outbound = 4 -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Abstractions.PolicyResponse
+Gatewright.Abstractions.PolicyResponse.Body.get -> System.ReadOnlyMemory<byte>
+Gatewright.Abstractions.PolicyResponse.ContentType.get -> string?
+Gatewright.Abstractions.PolicyResponse.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Gatewright.Abstractions.PolicyResponse.PolicyResponse(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string!, string!>? headers = null, System.ReadOnlyMemory<byte> body = default(System.ReadOnlyMemory<byte>), string? contentType = null) -> void
+Gatewright.Abstractions.PolicyResponse.StatusCode.get -> int
+Gatewright.Abstractions.PolicyResult
+Gatewright.Abstractions.PolicyResult.Code.get -> string?
+Gatewright.Abstractions.PolicyResult.Kind.get -> Gatewright.Abstractions.PolicyResultKind
+Gatewright.Abstractions.PolicyResult.Message.get -> string?
+Gatewright.Abstractions.PolicyResult.Response.get -> Gatewright.Abstractions.PolicyResponse?
+Gatewright.Abstractions.PolicyResult.StatusCode.get -> int
+Gatewright.Abstractions.PolicyResultKind
+Gatewright.Abstractions.PolicyResultKind.Continue = 0 -> Gatewright.Abstractions.PolicyResultKind
+Gatewright.Abstractions.PolicyResultKind.Reject = 1 -> Gatewright.Abstractions.PolicyResultKind
+Gatewright.Abstractions.PolicyResultKind.Respond = 2 -> Gatewright.Abstractions.PolicyResultKind
+Gatewright.Abstractions.ResponseCapture
+Gatewright.Abstractions.ResponseCapture.Body.get -> System.ReadOnlyMemory<byte>
+Gatewright.Abstractions.ResponseCapture.Headers.get -> System.Collections.Generic.IReadOnlyDictionary<string!, string!>!
+Gatewright.Abstractions.ResponseCapture.ResponseCapture(int statusCode, System.Collections.Generic.IReadOnlyDictionary<string!, string!>! headers, System.ReadOnlyMemory<byte> body) -> void
+Gatewright.Abstractions.ResponseCapture.StatusCode.get -> int
+Gatewright.Abstractions.ResponseCaptureFeature
+Gatewright.Abstractions.ResponseCaptureFeature.Captured.get -> System.Func<Gatewright.Abstractions.ResponseCapture!, System.Threading.Tasks.ValueTask>!
+Gatewright.Abstractions.ResponseCaptureFeature.MaxBodyBytes.get -> int
+Gatewright.Abstractions.ResponseCaptureFeature.ResponseCaptureFeature(int maxBodyBytes, System.Func<Gatewright.Abstractions.ResponseCapture!, System.Threading.Tasks.ValueTask>! captured) -> void
+Gatewright.Abstractions.SubscriptionInfo
+Gatewright.Abstractions.SubscriptionInfo.Id.get -> string!
+Gatewright.Abstractions.SubscriptionInfo.IsActive.get -> bool
+Gatewright.Abstractions.SubscriptionInfo.Plan.get -> string?
+Gatewright.Abstractions.SubscriptionInfo.ProductId.get -> string!
+Gatewright.Abstractions.SubscriptionInfo.SubscriptionInfo(string! id, string! productId, string? plan = null, bool isActive = true) -> void
+static Gatewright.Abstractions.PolicyResult.Continue.get -> Gatewright.Abstractions.PolicyResult!
+static Gatewright.Abstractions.PolicyResult.Reject(int statusCode, string! code, string! message) -> Gatewright.Abstractions.PolicyResult!
+static Gatewright.Abstractions.PolicyResult.Respond(Gatewright.Abstractions.PolicyResponse! response) -> Gatewright.Abstractions.PolicyResult!

@@ -1,0 +1,26 @@
+# A customer distribution: the standard gateway plus the C# policy "acme.fraudCheck" (samples/custom-policy).
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  gateway:
+    image: acme/gateway:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/custom-policy
+        ASSEMBLY: Acme.Gateway
+    command: ["--Gateway:Mode=all", "--Gateway:ConfigFile=/config/gateway.json", "--Gateway:DiagnosticsToken=dev-diagnostics"]
+    volumes:
+      - ./gateway.json:/config/gateway.json:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orders

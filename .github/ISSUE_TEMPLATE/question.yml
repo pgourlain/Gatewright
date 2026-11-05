@@ -1,0 +1,10 @@
+name: Question
+description: Ask for help using Gatewright
+labels: [question]
+body:
+  - type: textarea
+    id: question
+    attributes:
+      label: Your question
+    validations:
+      required: true

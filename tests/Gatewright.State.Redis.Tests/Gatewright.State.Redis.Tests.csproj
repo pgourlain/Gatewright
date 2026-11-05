@@ -1,0 +1,11 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Testcontainers.Redis" />
+    <PackageReference Include="Microsoft.Extensions.TimeProvider.Testing" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Gatewright.State.Redis/Gatewright.State.Redis.csproj" />
+    <ProjectReference Include="../../src/Gatewright.Policies/Gatewright.Policies.csproj" />
+    <ProjectReference Include="../../src/Gatewright.DataPlane/Gatewright.DataPlane.csproj" />
+  </ItemGroup>
+</Project>

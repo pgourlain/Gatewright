@@ -1,0 +1,88 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/console"
+@inject IGatewayConsole Gateway
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Test console</h2>
+        <p>Send a request through the gateway and see what each policy decided, and how long it took.</p>
+    </div>
+</div>
+<ErrorBanner Message="@error" />
+<section class="card" aria-label="Request">
+    <div class="card-title">Request</div>
+    <div class="card-pad" style="display: flex; flex-direction: column; gap: 16px">
+        <div style="display: grid; grid-template-columns: 120px minmax(0, 1fr) auto; gap: 12px; align-items: end">
+            <div class="field"><label for="method">Method</label>
+                <select id="method" @bind="method">
+                    @foreach (var m in new[] { "GET", "POST", "PUT", "PATCH", "DELETE" }) { <option value="@m">@m</option> }
+                </select>
+            </div>
+            <div class="field"><label for="path">Path</label><input id="path" class="mono" @bind="path" placeholder="/orders/1" /></div>
+            <button id="send" class="primary" type="button" @onclick="SendAsync">Send request</button>
+        </div>
+        <div class="cols" style="grid-template-columns: minmax(0, 1fr) minmax(0, 1fr)">
+            <div class="field"><label for="headers">Headers (one per line, Name: value)</label><textarea id="headers" rows="4" @bind="headers" placeholder="x-api-key: gw_..."></textarea></div>
+            <div class="field"><label for="body">Body</label><textarea id="body" rows="4" @bind="body"></textarea></div>
+        </div>
+    </div>
+</section>
+
+@if (response is not null)
+{
+    <div class="cols" style="grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr)">
+        <section class="card" aria-label="Policy trace">
+            <div class="card-title">Policy trace <span class="muted">@response.ElapsedMs ms end to end</span></div>
+            <div class="wf" id="trace">
+                @{ var total = Math.Max(response.Trace.Sum(t => t.DurationMs), 0.001); var offset = 0.0; }
+                @foreach (var entry in response.Trace)
+                {
+                    var left = offset / total * 100;
+                    var width = Math.Max(entry.DurationMs / total * 100, 1.5);
+                    offset += entry.DurationMs;
+                    <div class="wf-row">
+                        <div><div class="mono"><strong>@entry.Policy</strong></div><div class="muted" style="font-size: 12px">@entry.Phase</div></div>
+                        <div class="wf-track"><div class="wf-bar @(entry.Result == "Continue" ? "" : "err")" style="left: @Pct(left); width: @Pct(width)"></div></div>
+                        <div class="right"><span class="pill @(entry.Result == "Continue" ? "ok" : "err")">@entry.Result</span> <span class="mono muted">@entry.DurationMs ms</span></div>
+                    </div>
+                }
+                @if (response.Trace.Count == 0)
+                {
+                    <div class="card-pad muted">No trace returned (is the gateway diagnostics token configured?).</div>
+                }
+            </div>
+        </section>
+        <section class="card" aria-label="Response">
+            <div class="card-title">Response <span id="status" class="pill @(response.StatusCode < 400 ? "ok" : response.StatusCode < 500 ? "warn" : "err")">@response.StatusCode (@response.ElapsedMs ms)</span></div>
+            <div class="card-pad" style="display: flex; flex-direction: column; gap: 14px">
+                <div class="field"><label>Headers</label><pre>@string.Join("\n", response.Headers)</pre></div>
+                <div class="field"><label>Body</label><pre id="responseBody">@response.Body</pre></div>
+            </div>
+        </section>
+    </div>
+}
+
+@code {
+    private string? error;
+    private string method = "GET";
+    private string path = "/";
+    private string headers = "";
+    private string body = "";
+    private ConsoleResponse? response;
+
+    private static string Pct(double value) => value.ToString("0.##", System.Globalization.CultureInfo.InvariantCulture) + "%";
+
+    private async Task SendAsync()
+    {
+        error = null;
+        try
+        {
+            response = await Gateway.SendAsync(new ConsoleRequest(method, path, headers.Split('\n', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries), body));
+        }
+        catch (HttpRequestException ex)
+        {
+            error = "The gateway cannot be reached: " + ex.Message;
+        }
+    }
+}

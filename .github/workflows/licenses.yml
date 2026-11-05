@@ -1,0 +1,25 @@
+name: Licenses
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  licenses:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Restore
+        run: dotnet restore Gatewright.slnx
+      - name: Install nuget-license
+        run: dotnet tool install --global nuget-license
+      - name: Verify allowed licenses
+        run: |
+          nuget-license -i Gatewright.slnx -t -a build/allowed-licenses.json -ignore build/ignored-packages.json -override build/license-overrides.json -o JsonPretty > /dev/null

@@ -1,0 +1,12 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="Microsoft.IdentityModel.JsonWebTokens" />
+  </ItemGroup>
+  <ItemGroup>
+    <InternalsVisibleTo Include="Gatewright.Policies.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Abstractions/Gatewright.Abstractions.csproj" />
+    <ProjectReference Include="../Gatewright.Core/Gatewright.Core.csproj" />
+  </ItemGroup>
+</Project>

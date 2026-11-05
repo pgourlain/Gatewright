@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Gatewright.Cli/Gatewright.Cli.csproj" />
+  </ItemGroup>
+</Project>

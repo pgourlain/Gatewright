@@ -1,0 +1,8 @@
+[
+  {
+    "Id": "xunit.abstractions",
+    "Version": "2.0.3",
+    "License": "Apache-2.0",
+    "LicenseUrl": "https://licenses.nuget.org/Apache-2.0"
+  }
+]

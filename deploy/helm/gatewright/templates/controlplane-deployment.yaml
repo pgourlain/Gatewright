@@ -1,0 +1,113 @@
+{{- if eq .Values.gateway.mode "separate" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatewright.fullname" . }}-controlplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controlplane
+spec:
+  # Single replica: the default SQLite provider is not safe for concurrent writers. Set postgres.connectionString
+  # (ControlPlane:Provider=Postgres) to scale beyond one replica.
+  replicas: {{ if (or .Values.postgres.connectionString .Values.postgres.dev.enabled) }}2{{ else }}1{{ end }}
+  selector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "controlplane") .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gatewright.labels" . | nindent 8 }}
+        app.kubernetes.io/component: controlplane
+        {{- if .Values.azureWorkloadIdentity.enabled }}
+        azure.workload.identity/use: "true"
+        {{- end }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      serviceAccountName: {{ include "gatewright.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- $init := include "gatewright.waitForDevPostgresInitContainer" . }}
+      {{- if trim $init }}
+      initContainers:
+        {{- $init | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: controlplane
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: admin
+              containerPort: {{ .Values.controlPlane.service.adminPort }}
+            - name: grpc
+              containerPort: {{ .Values.controlPlane.service.grpcPort }}
+          env:
+            - name: Gateway__Mode
+              value: "ControlPlane"
+            - name: Kestrel__Endpoints__Admin__Url
+              value: {{ printf "http://+:%d" (.Values.controlPlane.service.adminPort | int) | quote }}
+            - name: Kestrel__Endpoints__Admin__Protocols
+              value: "Http1"
+            - name: Kestrel__Endpoints__Grpc__Url
+              value: {{ printf "http://+:%d" (.Values.controlPlane.service.grpcPort | int) | quote }}
+            - name: Kestrel__Endpoints__Grpc__Protocols
+              value: "Http2"
+            {{- include "gatewright.commonEnv" . | nindent 12 }}
+            {{- include "gatewright.controlPlaneEnv" . | nindent 12 }}
+            {{- include "gatewright.distributionServerEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: dataprotection-keys
+              mountPath: /home/app/.aspnet
+            {{- if not (or .Values.postgres.connectionString .Values.postgres.dev.enabled) }}
+            - name: data
+              mountPath: /data
+            {{- end }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: admin
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: admin
+          resources:
+            {{- toYaml .Values.controlPlane.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: dataprotection-keys
+          emptyDir: {}
+        {{- if not (or .Values.postgres.connectionString .Values.postgres.dev.enabled) }}
+        - name: data
+          {{- if .Values.controlPlane.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "gatewright.fullname" . }}-controlplane-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+        {{- end }}
+      {{- with .Values.controlPlane.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controlPlane.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.controlPlane.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

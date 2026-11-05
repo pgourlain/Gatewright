@@ -1,0 +1,6 @@
+global:
+  scrape_interval: 5s
+scrape_configs:
+  - job_name: gatewright
+    static_configs:
+      - targets: ["otel-collector:9464"]

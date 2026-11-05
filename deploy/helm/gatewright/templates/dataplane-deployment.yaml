@@ -1,0 +1,91 @@
+{{- if eq .Values.gateway.mode "separate" }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatewright.fullname" . }}-dataplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dataplane
+spec:
+  {{- if not .Values.dataPlane.autoscaling.enabled }}
+  replicas: {{ .Values.dataPlane.replicaCount }}
+  {{- end }}
+  selector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "dataplane") .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gatewright.labels" . | nindent 8 }}
+        app.kubernetes.io/component: dataplane
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      # No Kubernetes RBAC: only the control plane reads the Kubernetes API (CLAUDE.md security rule).
+      automountServiceAccountToken: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.podSecurityContext }}
+      securityContext:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: dataplane
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag | default .Chart.AppVersion }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            {{- toYaml .Values.securityContext | nindent 12 }}
+          ports:
+            - name: http
+              containerPort: {{ .Values.dataPlane.service.httpPort }}
+          env:
+            - name: Gateway__Mode
+              value: "DataPlane"
+            {{- include "gatewright.commonEnv" . | nindent 12 }}
+            {{- include "gatewright.distributionClientEnv" . | nindent 12 }}
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+            - name: dataprotection-keys
+              mountPath: /home/app/.aspnet
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+          resources:
+            {{- toYaml .Values.dataPlane.resources | nindent 12 }}
+      volumes:
+        - name: tmp
+          emptyDir: {}
+        - name: dataprotection-keys
+          emptyDir: {}
+      {{- with .Values.dataPlane.topologySpreadConstraints }}
+      topologySpreadConstraints:
+        {{- range . }}
+        - {{- toYaml . | nindent 10 }}
+          labelSelector:
+            matchLabels:
+              {{- include "gatewright.selectorLabels" (merge (dict "component" "dataplane") $) | nindent 14 }}
+        {{- end }}
+      {{- end }}
+      {{- with .Values.dataPlane.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dataPlane.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.dataPlane.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+{{- end }}

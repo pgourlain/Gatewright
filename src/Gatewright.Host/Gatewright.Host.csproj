@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <!-- `dotnet publish -t:PublishContainer`: non-root, chiseled (minimal attack surface; "-extra" variant resolved automatically for globalization/SQLite). -->
+    <ContainerRepository>gatewright-host</ContainerRepository>
+    <ContainerFamily>noble-chiseled</ContainerFamily>
+  </PropertyGroup>
+  <ItemGroup>
+    <ContainerLabel Include="org.opencontainers.image.licenses" Value="MIT" />
+    <ContainerLabel Include="org.opencontainers.image.source" Value="$(RepositoryUrl)" />
+    <ContainerLabel Include="org.opencontainers.image.version" Value="$(Version)" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Sdk/Gatewright.Sdk.csproj" />
+  </ItemGroup>
+</Project>

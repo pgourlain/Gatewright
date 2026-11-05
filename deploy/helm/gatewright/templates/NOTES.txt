@@ -1,0 +1,25 @@
+Gatewright has been deployed ({{ .Values.gateway.mode }} mode, environment "{{ .Values.gateway.environment }}").
+
+{{- if eq .Values.gateway.mode "all" }}
+
+Gateway (Admin API + proxy, one process):
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "gatewright.fullname" . }}-all
+{{- else }}
+
+Control plane (Admin API + gRPC distribution):
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "gatewright.fullname" . }}-controlplane
+
+Data plane (proxy, {{ .Values.dataPlane.replicaCount }} replica(s)):
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "gatewright.fullname" . }}-dataplane
+{{- end }}
+{{- if .Values.portal.enabled }}
+
+Web portal:
+  kubectl --namespace {{ .Release.Namespace }} get svc {{ include "gatewright.fullname" . }}-portal
+{{- end }}
+
+{{- if not .Values.controlPlane.auth.authority }}
+
+No Entra ID (OIDC) authority is set: the Admin API and the portal are unreachable without
+controlPlane.auth.authority/audience (or controlPlane.auth.developmentBypass for a non-production try-out).
+{{- end }}

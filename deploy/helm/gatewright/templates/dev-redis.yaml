@@ -1,0 +1,45 @@
+{{- if and .Values.redis.dev.enabled (not .Values.redis.connectionString) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatewright.fullname" . }}-redis-dev
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-dev
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "redis-dev") .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gatewright.labels" . | nindent 8 }}
+        app.kubernetes.io/component: redis-dev
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: redis
+          image: {{ .Values.redis.dev.image }}
+          ports:
+            - name: redis
+              containerPort: 6379
+          resources:
+            {{- toYaml .Values.redis.dev.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-redis-dev
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: redis-dev
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "redis-dev") .) | nindent 4 }}
+  ports:
+    - name: redis
+      port: 6379
+      targetPort: redis
+{{- end }}

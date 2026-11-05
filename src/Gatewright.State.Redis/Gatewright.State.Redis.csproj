@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="StackExchange.Redis" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Abstractions/Gatewright.Abstractions.csproj" />
+    <ProjectReference Include="../Gatewright.Core/Gatewright.Core.csproj" />
+  </ItemGroup>
+</Project>

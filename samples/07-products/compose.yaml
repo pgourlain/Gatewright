@@ -1,0 +1,53 @@
+# One process (mode "all", database configuration): gateway + Admin API + SQLite. Development settings only.
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  gateway:
+    image: gatewright/host:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__Mode: All
+      Gateway__ConfigSource: Database
+      Gateway__Environment: dev
+      Gateway__ApiKeyPepper: demo-pepper-change-me
+      ControlPlane__ConnectionString: Data Source=/data/gatewright.db
+      ControlPlane__Auth__DevelopmentBypass: "true"
+      Gateway__DiagnosticsToken: dev-diagnostics
+    volumes:
+      - gateway-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orders
+
+  portal:
+    image: gatewright/portal:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Gatewright.Portal
+        ASSEMBLY: Gatewright.Portal
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Portal__Auth__Mode: Development
+      Portal__AdminApiBaseUrl: http://gateway:8080
+      Portal__GatewayBaseUrl: http://gateway:8080
+      Portal__GatewayDiagnosticsToken: dev-diagnostics
+    ports:
+      - "8088:8080"
+    depends_on:
+      - gateway
+
+volumes:
+  gateway-data:

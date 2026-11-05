@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/pgourlain/gatewright/docs/schemas/x-gateway-1.schema.json",
+  "title": "Gatewright x-gateway extension, version 1",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string" },
+    "basePath": { "type": "string", "pattern": "^/" },
+    "product": { "type": "string" },
+    "products": { "type": "array", "items": { "type": "string" } },
+    "backend": { "$ref": "#/$defs/backend" },
+    "policies": { "$ref": "#/$defs/policySet" },
+    "jwt": { "type": "object" },
+    "apiKey": { "type": "object" },
+    "ipFilter": { "type": "object" },
+    "rateLimit": { "type": "object" },
+    "quota": { "type": "object" },
+    "cache": { "type": "object" },
+    "rewrite": { "type": "object" },
+    "mockResponse": { "type": "object" },
+    "cors": { "type": "object" },
+    "timeout": { "type": "object" },
+    "retry": { "type": "object" },
+    "circuitBreaker": { "type": "object" }
+  },
+  "$defs": {
+    "backend": {
+      "type": "object",
+      "properties": {
+        "service": { "type": "string", "pattern": "^[^/\\s]+/[^/:\\s]+:\\d{1,5}$" },
+        "destinations": { "type": "array", "items": { "type": "string", "format": "uri" } },
+        "timeout": { "type": "string" },
+        "httpVersion": { "enum": ["1.1", "2"] },
+        "healthCheck": { "type": "object" }
+      }
+    },
+    "policyReference": {
+      "type": "object",
+      "properties": {
+        "type": { "type": "string" },
+        "config": {},
+        "ref": { "type": "string" },
+        "inheritance": { "enum": ["inherit", "override", "remove"] }
+      }
+    },
+    "policySet": {
+      "type": "object",
+      "properties": {
+        "inbound": { "type": "array", "items": { "$ref": "#/$defs/policyReference" } },
+        "backend": { "type": "array", "items": { "$ref": "#/$defs/policyReference" } },
+        "outbound": { "type": "array", "items": { "$ref": "#/$defs/policyReference" } },
+        "onError": { "type": "array", "items": { "$ref": "#/$defs/policyReference" } }
+      }
+    }
+  }
+}

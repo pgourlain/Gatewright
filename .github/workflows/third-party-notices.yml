@@ -1,0 +1,25 @@
+name: Third-party notices
+
+on:
+  workflow_dispatch:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - run: dotnet restore Gatewright.slnx
+      - run: dotnet tool install --global nuget-license
+      - name: Generate THIRD-PARTY-NOTICES.md
+        run: ./scripts/generate-third-party-notices.sh
+      - uses: actions/upload-artifact@v4
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.md

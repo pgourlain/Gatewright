@@ -1,0 +1,33 @@
+#nullable enable
+abstract Gatewright.Sdk.GatewayPolicy<TConfig>.Create(TConfig! config, Gatewright.Abstractions.PolicyCompilationContext! context) -> Gatewright.Abstractions.IPolicyInstance!
+Gatewright.Sdk.GatewayApplication
+Gatewright.Sdk.GatewayApplication.App.get -> Microsoft.AspNetCore.Builder.WebApplication!
+Gatewright.Sdk.GatewayApplication.DisposeAsync() -> System.Threading.Tasks.ValueTask
+Gatewright.Sdk.GatewayApplication.Run() -> void
+Gatewright.Sdk.GatewayApplication.RunAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Gatewright.Sdk.GatewayApplication.Services.get -> System.IServiceProvider!
+Gatewright.Sdk.GatewayApplication.StartAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Gatewright.Sdk.GatewayApplication.StopAsync(System.Threading.CancellationToken cancellationToken = default(System.Threading.CancellationToken)) -> System.Threading.Tasks.Task!
+Gatewright.Sdk.GatewayHost
+Gatewright.Sdk.GatewayHostBuilder
+Gatewright.Sdk.GatewayHostBuilder.AddPolicy(Gatewright.Abstractions.IGatewayPolicy! policy) -> Gatewright.Sdk.GatewayHostBuilder!
+Gatewright.Sdk.GatewayHostBuilder.AddPolicy<TPolicy>() -> Gatewright.Sdk.GatewayHostBuilder!
+Gatewright.Sdk.GatewayHostBuilder.Build() -> Gatewright.Sdk.GatewayApplication!
+Gatewright.Sdk.GatewayHostBuilder.Builder.get -> Microsoft.AspNetCore.Builder.WebApplicationBuilder!
+Gatewright.Sdk.GatewayHostBuilder.Configuration.get -> Microsoft.Extensions.Configuration.ConfigurationManager!
+Gatewright.Sdk.GatewayHostBuilder.Services.get -> Microsoft.Extensions.DependencyInjection.IServiceCollection!
+Gatewright.Sdk.GatewayPolicy<TConfig>
+Gatewright.Sdk.GatewayPolicy<TConfig>.Compile(System.Text.Json.JsonElement config, Gatewright.Abstractions.PolicyCompilationContext! context) -> Gatewright.Abstractions.IPolicyInstance!
+Gatewright.Sdk.GatewayPolicy<TConfig>.ConfigSchema.get -> System.Text.Json.JsonElement
+Gatewright.Sdk.GatewayPolicy<TConfig>.GatewayPolicy() -> void
+Gatewright.Sdk.GatewayPolicy<TConfig>.Phases.get -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Sdk.GatewayPolicy<TConfig>.Type.get -> string!
+Gatewright.Sdk.GatewayPolicyAttribute
+Gatewright.Sdk.GatewayPolicyAttribute.GatewayPolicyAttribute(string! type) -> void
+Gatewright.Sdk.GatewayPolicyAttribute.Phases.get -> Gatewright.Abstractions.PolicyPhase
+Gatewright.Sdk.GatewayPolicyAttribute.Phases.set -> void
+Gatewright.Sdk.GatewayPolicyAttribute.Type.get -> string!
+Gatewright.Sdk.PolicyInstance
+static Gatewright.Sdk.GatewayHost.CreateBuilder(string![]? args = null) -> Gatewright.Sdk.GatewayHostBuilder!
+static Gatewright.Sdk.PolicyInstance.From(System.Func<Gatewright.Abstractions.GatewayContext!, Gatewright.Abstractions.PolicyResult!>! invoke) -> Gatewright.Abstractions.IPolicyInstance!
+static Gatewright.Sdk.PolicyInstance.From(System.Func<Gatewright.Abstractions.GatewayContext!, System.Threading.Tasks.ValueTask<Gatewright.Abstractions.PolicyResult!>>! invoke) -> Gatewright.Abstractions.IPolicyInstance!

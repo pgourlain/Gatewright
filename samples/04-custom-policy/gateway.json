@@ -1,0 +1,28 @@
+{
+  "version": 1,
+  "apis": [
+    {
+      "name": "orders",
+      "basePath": "/orders",
+      "version": "v1",
+      "backend": {
+        "destinations": [
+          "http://orders:8080"
+        ]
+      },
+      "policies": {
+        "inbound": [
+          {
+            "type": "acme.fraudCheck",
+            "config": {
+              "maxAmount": 1000,
+              "blockedCountries": [
+                "XX"
+              ]
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

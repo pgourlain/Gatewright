@@ -1,0 +1,6 @@
+apiVersion: 1
+providers:
+  - name: gatewright
+    type: file
+    options:
+      path: /var/lib/grafana/dashboards

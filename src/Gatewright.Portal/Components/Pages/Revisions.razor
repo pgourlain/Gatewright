@@ -1,0 +1,160 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/revisions"
+@using Gatewright.ControlPlane.Revisions
+@inject IPortalApi Api
+@inject AuthenticationStateProvider Auth
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Revisions</h2>
+        <p>Every change creates a revision. Publish one to an environment, or roll back to a published one.</p>
+    </div>
+    @if (canPublish)
+    {
+        <div class="actions">
+            <select id="latestEnv" @bind="latestEnv">@foreach (var (name, _) in environments) { <option value="@name">@name</option> }</select>
+            <button id="publishLatest" class="primary" type="button" @onclick="() => PublishLatestAsync()">Publish the latest draft to…</button>
+        </div>
+    }
+</div>
+<ErrorBanner Message="@error" />
+@if (message is not null) { <div class="ok" id="message">@message</div> }
+<div class="cols" style="grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr)">
+    <section class="card" aria-label="History">
+        <div class="card-title">History <span class="muted">select two revisions to compare, one to publish</span></div>
+        <div class="table-wrap">
+            <table id="revisions">
+                <thead><tr><th></th><th>#</th><th>Summary</th><th>By</th><th>When</th></tr></thead>
+                <tbody>
+                    @foreach (var revision in revisions)
+                    {
+                        var number = revision.Number;
+                        <tr>
+                            <td><input type="checkbox" class="pick" aria-label="Select revision @number" checked="@selected.Contains(number)" @onchange="e => Toggle(number, (bool)e.Value!)" /></td>
+                            <td class="mono">@number</td><td>@revision.Summary</td><td class="nowrap">@revision.CreatedBy</td><td class="muted nowrap">@revision.CreatedAt.ToString("u")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-pad" style="border-top: 1px solid var(--border)">
+            <button id="diff" type="button" @onclick="DiffAsync" disabled="@(selected.Count != 2)">Compare selected</button>
+        </div>
+    </section>
+    <section class="card" aria-label="Publish">
+        <div class="card-title">Environments</div>
+        <div class="table-wrap">
+            <table id="environments">
+                <tbody>
+                    @foreach (var (name, current) in environments)
+                    {
+                        var environment = name;
+                        <tr>
+                            <td><strong>@environment</strong></td>
+                            <td>@if (current is null) { <span class="pill neutral">nothing published</span> } else { <span class="pill ok"><span class="dot"></span>version @current</span> }</td>
+                            <td class="right">
+                                @if (canPublish && selected.Count == 1)
+                                {
+                                    <button type="button" class="publish-@environment btn small" @onclick="() => PublishAsync(environment, false)">Publish selected</button>
+                                    <button type="button" class="rollback-@environment btn small" @onclick="() => PublishAsync(environment, true)">Roll back to selected</button>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+@if (diff is not null)
+{
+    <section class="card" aria-label="Diff">
+        <div class="card-title">Differences</div>
+        <div class="table-wrap">
+            <table id="diffTable">
+                <thead><tr><th>Change</th><th>Path</th><th>Before</th><th>After</th></tr></thead>
+                <tbody>
+                    @foreach (var entry in diff) { <tr><td><span class="pill @(entry.Kind.ToString() == "Added" ? "ok" : entry.Kind.ToString() == "Removed" ? "err" : "warn")">@entry.Kind</span></td><td class="mono">@entry.Path</td><td class="mono muted">@entry.Before</td><td class="mono">@entry.After</td></tr> }
+                    @if (diff.Count == 0) { <tr><td colspan="4" class="muted">No difference.</td></tr> }
+                </tbody>
+            </table>
+        </div>
+    </section>
+}
+<section class="card" aria-label="Audit">
+    <div class="card-title">Audit <span class="muted">who changed what</span></div>
+    <div class="table-wrap">
+        <table id="audit">
+            <tbody>
+                @foreach (var entry in audit) { <tr><td class="muted nowrap">@entry.Timestamp.ToString("u")</td><td class="nowrap">@entry.Actor</td><td><span class="pill info">@entry.Action</span></td><td class="mono">@entry.EntityId</td><td class="muted">@entry.Details</td></tr> }
+            </tbody>
+        </table>
+    </div>
+</section>
+
+@code {
+    private string? error;
+    private string? message;
+    private bool canPublish;
+    private string latestEnv = "dev";
+    private IReadOnlyList<RevisionResponse> revisions = [];
+    private IReadOnlyList<(string Name, long? Current)> environments = [];
+    private IReadOnlyList<AuditResponse> audit = [];
+    private IReadOnlyList<DiffEntry>? diff;
+    private readonly List<long> selected = [];
+
+    protected override async Task OnInitializedAsync()
+    {
+        canPublish = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanPublish;
+        await LoadAsync();
+    }
+
+    private async Task LoadAsync()
+    {
+        try
+        {
+            revisions = await Api.GetRevisionsAsync();
+            environments = await Api.GetEnvironmentsAsync();
+            audit = await Api.GetAuditAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private void Toggle(long number, bool on)
+    {
+        if (on) { selected.Add(number); } else { selected.Remove(number); }
+        diff = null;
+    }
+
+    private async Task DiffAsync()
+    {
+        var ordered = selected.Order().ToList();
+        try { diff = await Api.GetDiffAsync(ordered[0], ordered[1]); }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private async Task PublishAsync(string environment, bool rollback)
+    {
+        error = null;
+        try
+        {
+            var result = await Api.PublishAsync(environment, selected[0], rollback);
+            message = $"{(rollback ? "Rolled back" : "Published")} revision {result.Revision} in {environment} as version {result.Number}.";
+            await LoadAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+
+    private async Task PublishLatestAsync()
+    {
+        error = null;
+        try
+        {
+            var result = await Api.PublishAsync(latestEnv, 0, false);
+            message = $"Published revision {result.Revision} in {latestEnv} as version {result.Number}.";
+            await LoadAsync();
+        }
+        catch (PortalApiException ex) { error = ex.Message; }
+    }
+}

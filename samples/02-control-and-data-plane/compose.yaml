@@ -1,0 +1,84 @@
+# Control plane (database, Admin API, gRPC distribution) + two stateless data planes + web portal.
+# Development settings only: the Admin API accepts every caller as administrator.
+x-host: &host
+  image: gatewright/host:dev
+  build:
+    context: ../..
+    dockerfile: Dockerfile
+
+x-dataplane: &dataplane
+  <<: *host
+  environment: &dataplane-env
+    Gateway__Mode: DataPlane
+    Gateway__Environment: dev
+    Gateway__DiagnosticsToken: dev-diagnostics
+    Distribution__Endpoint: http://controlplane:8082
+    Distribution__Token: dev-distribution-token
+  depends_on:
+    - controlplane
+
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  controlplane:
+    <<: *host
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__Mode: ControlPlane
+      ControlPlane__ConnectionString: Data Source=/data/gatewright.db
+      ControlPlane__Auth__DevelopmentBypass: "true"
+      Distribution__Tokens__0: dev-distribution-token
+      # Admin API on 8081 (HTTP/1.1), gRPC distribution on 8082 (cleartext HTTP/2).
+      Kestrel__Endpoints__Admin__Url: http://+:8081
+      Kestrel__Endpoints__Admin__Protocols: Http1
+      Kestrel__Endpoints__Grpc__Url: http://+:8082
+      Kestrel__Endpoints__Grpc__Protocols: Http2
+    volumes:
+      - controlplane-data:/data
+    ports:
+      - "8081:8081"
+
+  dataplane-1:
+    <<: *dataplane
+    environment:
+      <<: *dataplane-env
+      Distribution__NodeId: dp-1
+    ports:
+      - "8080:8080"
+
+  dataplane-2:
+    <<: *dataplane
+    environment:
+      <<: *dataplane-env
+      Distribution__NodeId: dp-2
+    ports:
+      - "8090:8080"
+
+  portal:
+    image: gatewright/portal:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Gatewright.Portal
+        ASSEMBLY: Gatewright.Portal
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Portal__Auth__Mode: Development
+      Portal__AdminApiBaseUrl: http://controlplane:8081
+      Portal__GatewayBaseUrl: http://dataplane-1:8080
+      Portal__GatewayDiagnosticsToken: dev-diagnostics
+    ports:
+      - "8088:8080"
+    depends_on:
+      - controlplane
+
+volumes:
+  controlplane-data:

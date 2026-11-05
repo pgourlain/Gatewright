@@ -1,0 +1,21 @@
+{
+  "$schema": "http://json.schemastore.org/template",
+  "author": "Pierrick Gourlain",
+  "classifications": [ "Web", "API", "Gateway" ],
+  "identity": "Gatewright.Templates.Host",
+  "name": "Gatewright host",
+  "shortName": "gatewright-host",
+  "description": "A Gatewright gateway distribution with one sample custom policy, tests and a container build.",
+  "tags": { "language": "C#", "type": "project" },
+  "sourceName": "Acme.Gateway",
+  "preferNameDirectory": true,
+  "symbols": {
+    "gatewrightVersion": {
+      "type": "parameter",
+      "datatype": "string",
+      "defaultValue": "0.0.0-preview.*",
+      "replaces": "GATEWRIGHT_VERSION",
+      "description": "Version (or floating range) of the Gatewright.Sdk and Gatewright.Testing packages."
+    }
+  }
+}

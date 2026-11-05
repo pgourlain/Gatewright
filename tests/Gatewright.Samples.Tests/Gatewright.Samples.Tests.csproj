@@ -1,0 +1,9 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <PackageReference Include="OpenTelemetry.Exporter.InMemory" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../../src/Gatewright.Testing/Gatewright.Testing.csproj" />
+    <ProjectReference Include="../../samples/custom-policy/custom-policy.csproj" />
+  </ItemGroup>
+</Project>

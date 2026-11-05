@@ -1,0 +1,65 @@
+# Gateway -> otel-gui: a single lightweight viewer for traces, logs and metrics (OTLP/HTTP, no collector).
+# The gateway runs with its database and Admin API, and the web portal manages it. Development settings only.
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  gateway:
+    image: gatewright/host:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__Mode: All
+      Gateway__ConfigSource: Database
+      Gateway__Environment: dev
+      Gateway__DiagnosticsToken: dev-diagnostics
+      Gateway__ConfigPollInterval: "00:00:30"
+      ControlPlane__ConnectionString: Data Source=/data/gatewright.db
+      ControlPlane__Auth__DevelopmentBypass: "true"
+      Telemetry__Otlp__Endpoint: http://otel-gui:4318
+      Telemetry__Otlp__Protocol: http/protobuf
+      OTEL_METRIC_EXPORT_INTERVAL: "5000"
+      Telemetry__Usage__Enabled: "true"
+      Telemetry__Usage__FlushSeconds: "10"
+    volumes:
+      - gateway-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orders
+      - otel-gui
+
+  otel-gui:
+    image: ghcr.io/metafab/otel-gui:latest
+    ports:
+      - "4318:4318"
+
+  portal:
+    image: gatewright/portal:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: src/Gatewright.Portal
+        ASSEMBLY: Gatewright.Portal
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Portal__Auth__Mode: Development
+      Portal__AdminApiBaseUrl: http://gateway:8080
+      Portal__GatewayBaseUrl: http://gateway:8080
+      Portal__GatewayDiagnosticsToken: dev-diagnostics
+    ports:
+      - "8088:8080"
+    depends_on:
+      - gateway
+
+volumes:
+  gateway-data:

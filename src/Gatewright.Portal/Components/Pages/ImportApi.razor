@@ -1,0 +1,133 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@page "/import"
+@inject IPortalApi Api
+@inject AuthenticationStateProvider Auth
+
+<div class="page-head">
+    <div class="grow">
+        <h2>Import an API</h2>
+        <p>Paste or upload an OpenAPI 3.0/3.1 document (JSON or YAML). <code>x-gateway</code> extensions are honored.</p>
+    </div>
+</div>
+<ErrorBanner Message="@error" />
+<div class="cols" style="grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr)">
+    <section class="card" aria-label="Document">
+        <div class="card-title">OpenAPI document</div>
+        <div class="card-pad" style="display: flex; flex-direction: column; gap: 12px">
+            <InputFile OnChange="OnFileAsync" />
+            <textarea id="document" rows="16" style="width:100%" @bind="document" @bind:event="oninput"></textarea>
+        </div>
+    </section>
+    <section class="card" aria-label="Backend">
+        <div class="card-title">Backend and options</div>
+        <div class="card-pad" style="display: flex; flex-direction: column; gap: 14px">
+            <div class="field"><label for="service">Discovered service</label>
+                <select id="service" @bind="service">
+                    <option value="">(none, use destinations)</option>
+                    @foreach (var item in services)
+                    {
+                        @foreach (var port in item.Ports)
+                        {
+                            <option value="@port.Reference">@port.Reference (@port.ReadyEndpoints ready)</option>
+                        }
+                    }
+                </select>
+            </div>
+            <div class="field"><label for="destinations">Destinations</label><input id="destinations" @bind="destinations" placeholder="http://orders:8080, http://orders2:8080" /></div>
+            <div class="field"><label for="name">Name</label><input id="name" @bind="name" /></div>
+            <div class="field"><label for="basePath">Base path</label><input id="basePath" @bind="basePath" /></div>
+            <div class="field"><label for="product">Product</label><input id="product" @bind="product" /></div>
+            <label class="check"><input type="checkbox" @bind="keepMissing" /> Keep operations missing from the document</label>
+            <div class="actions">
+                <button id="preview" type="button" @onclick="() => RunAsync(true)">Preview</button>
+                @if (canEdit)
+                {
+                    <button id="apply" class="primary" type="button" @onclick="() => RunAsync(false)" disabled="@(report is null || report.Applied)">Import</button>
+                }
+            </div>
+        </div>
+    </section>
+</div>
+
+@if (report is not null)
+{
+    <section class="card" aria-label="Report">
+        <div class="card-title">@(report.Applied ? "Imported" : "Preview")</div>
+        <div class="card-pad @(report.Applied ? "ok" : "")" id="report" style="display: block">
+            <h3>@(report.Applied ? "" : "Preview: ")API @report.Api @(report.Created ? "will be created" : "will be updated")</h3>
+            @foreach (var item in report.ApiChanges) { <div>changed: @item</div> }
+            @foreach (var item in report.Added) { <div class="mono" style="color: var(--ok-fg)">added: @item</div> }
+            @foreach (var item in report.Updated) { <div>updated: @item</div> }
+            @foreach (var item in report.Removed) { <div class="mono" style="color: var(--err-fg)">removed: @item</div> }
+            <div class="muted">@report.Unchanged operation(s) unchanged.</div>
+            @foreach (var item in report.Warnings) { <div>warning: @item</div> }
+        </div>
+    </section>
+}
+
+@code {
+    private string? error;
+    private string document = "";
+    private string service = "";
+    private string destinations = "";
+    private string name = "";
+    private string basePath = "";
+    private string product = "";
+    private bool keepMissing;
+    private bool canEdit;
+    private IReadOnlyList<DiscoveredServiceResponse> services = [];
+    private ApiImportReport? report;
+
+    protected override async Task OnInitializedAsync()
+    {
+        canEdit = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanEdit;
+        try
+        {
+            services = await Api.GetDiscoveredServicesAsync();
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+
+    private async Task OnFileAsync(InputFileChangeEventArgs e)
+    {
+        using var reader = new StreamReader(e.File.OpenReadStream(5_000_000));
+        document = await reader.ReadToEndAsync();
+    }
+
+    private async Task RunAsync(bool dryRun)
+    {
+        error = null;
+        var query = new List<string>();
+        void Add(string key, string value)
+        {
+            if (!string.IsNullOrWhiteSpace(value))
+            {
+                query.Add($"{key}={Uri.EscapeDataString(value.Trim())}");
+            }
+        }
+
+        Add("name", name);
+        Add("basePath", basePath);
+        Add("service", service);
+        Add("product", product);
+        foreach (var destination in destinations.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+        {
+            Add("destination", destination);
+        }
+
+        if (keepMissing) { query.Add("removeMissing=false"); }
+        if (dryRun) { query.Add("dryRun=true"); }
+        try
+        {
+            report = await Api.ImportOpenApiAsync(document, query.Count > 0 ? "?" + string.Join('&', query) : "");
+        }
+        catch (PortalApiException ex)
+        {
+            error = ex.Message;
+        }
+    }
+}

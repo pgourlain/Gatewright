@@ -1,0 +1,64 @@
+{{- if and .Values.rbac.create .Values.kubernetes.enabled }}
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: {{ include "gatewright.fullname" . }}-discovery
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+rules:
+  # Discovery watches every namespace (Services annotated gatewright.io/expose, their EndpointSlices).
+  - apiGroups: [""]
+    resources: ["services"]
+    verbs: ["get", "list", "watch"]
+  - apiGroups: ["discovery.k8s.io"]
+    resources: ["endpointslices"]
+    verbs: ["get", "list", "watch"]
+  # Read-only, and only read: the certificate material never leaves this process (7.5). The API has no
+  # narrower scope than "all secrets" short of per-name rules the chart cannot predict; tighten with a
+  # namespaced Role instead if every TLS secret lives in known namespaces.
+  - apiGroups: [""]
+    resources: ["secrets"]
+    verbs: ["get", "list", "watch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: {{ include "gatewright.fullname" . }}-discovery
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: {{ include "gatewright.fullname" . }}-discovery
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gatewright.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: Role
+metadata:
+  name: {{ include "gatewright.fullname" . }}-leader-election
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+rules:
+  # Leader election: the control plane's Lease lives in its own namespace.
+  - apiGroups: ["coordination.k8s.io"]
+    resources: ["leases"]
+    verbs: ["get", "list", "watch", "create", "update", "patch"]
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: {{ include "gatewright.fullname" . }}-leader-election
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: {{ include "gatewright.fullname" . }}-leader-election
+subjects:
+  - kind: ServiceAccount
+    name: {{ include "gatewright.serviceAccountName" . }}
+    namespace: {{ .Release.Namespace }}
+{{- end }}

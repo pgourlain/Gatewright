@@ -1,0 +1,87 @@
+{{- if and .Values.postgres.dev.enabled (not .Values.postgres.connectionString) }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "gatewright.fullname" . }}-postgres-dev
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-dev
+spec:
+  # Single replica, not a substitute for a managed database: for dev/test only (postgres.dev.enabled).
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "postgres-dev") .) | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "gatewright.labels" . | nindent 8 }}
+        app.kubernetes.io/component: postgres-dev
+    spec:
+      automountServiceAccountToken: false
+      containers:
+        - name: postgres
+          image: {{ .Values.postgres.dev.image }}
+          ports:
+            - name: postgres
+              containerPort: 5432
+          env:
+            - name: POSTGRES_DB
+              value: {{ .Values.postgres.dev.database | quote }}
+            - name: POSTGRES_USER
+              value: {{ .Values.postgres.dev.username | quote }}
+            - name: POSTGRES_PASSWORD
+              value: {{ .Values.postgres.dev.password | quote }}
+            - name: PGDATA
+              value: /data/pgdata
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          resources:
+            {{- toYaml .Values.postgres.dev.resources | nindent 12 }}
+      volumes:
+        - name: data
+          {{- if .Values.postgres.dev.persistence.enabled }}
+          persistentVolumeClaim:
+            claimName: {{ include "gatewright.fullname" . }}-postgres-dev-data
+          {{- else }}
+          emptyDir: {}
+          {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-postgres-dev
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-dev
+spec:
+  type: ClusterIP
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "postgres-dev") .) | nindent 4 }}
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres
+{{- if .Values.postgres.dev.persistence.enabled }}
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "gatewright.fullname" . }}-postgres-dev-data
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: postgres-dev
+spec:
+  accessModes:
+    - ReadWriteOnce
+  {{- with .Values.postgres.dev.persistence.storageClassName }}
+  storageClassName: {{ . }}
+  {{- end }}
+  resources:
+    requests:
+      storage: {{ .Values.postgres.dev.persistence.size }}
+{{- end }}
+{{- end }}

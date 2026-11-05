@@ -1,0 +1,22 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+  <PropertyGroup>
+    <IsPackable>false</IsPackable>
+    <NoWarn>$(NoWarn);CS1591;CA1812</NoWarn>
+    <!-- `dotnet publish -t:PublishContainer`: non-root, chiseled (minimal attack surface; "-extra" variant resolved automatically for globalization/SQLite). -->
+    <ContainerRepository>gatewright-portal</ContainerRepository>
+    <ContainerFamily>noble-chiseled</ContainerFamily>
+  </PropertyGroup>
+  <ItemGroup>
+    <ContainerLabel Include="org.opencontainers.image.licenses" Value="MIT" />
+    <ContainerLabel Include="org.opencontainers.image.source" Value="$(RepositoryUrl)" />
+    <ContainerLabel Include="org.opencontainers.image.version" Value="$(Version)" />
+  </ItemGroup>
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />
+    <InternalsVisibleTo Include="Gatewright.Portal.Tests" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Core/Gatewright.Core.csproj" />
+    <ProjectReference Include="../Gatewright.ControlPlane/Gatewright.ControlPlane.csproj" />
+  </ItemGroup>
+</Project>

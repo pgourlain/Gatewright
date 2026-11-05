@@ -1,0 +1,70 @@
+{{- if .Values.networkPolicy.enabled }}
+{{- if eq .Values.gateway.mode "all" }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "gatewright.fullname" . }}-all
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: all
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "all") .) | nindent 6 }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: {{ .Values.all.service.httpPort }}
+{{- else }}
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "gatewright.fullname" . }}-controlplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controlplane
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "controlplane") .) | nindent 6 }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: {{ .Values.controlPlane.service.adminPort }}
+        - port: {{ .Values.controlPlane.service.grpcPort }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "gatewright.fullname" . }}-dataplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: dataplane
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "dataplane") .) | nindent 6 }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: {{ .Values.dataPlane.service.httpPort }}
+{{- end }}
+{{- if .Values.portal.enabled }}
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: {{ include "gatewright.fullname" . }}-portal
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  podSelector:
+    matchLabels:
+      {{- include "gatewright.selectorLabels" (merge (dict "component" "portal") .) | nindent 6 }}
+  policyTypes: ["Ingress"]
+  ingress:
+    - ports:
+        - port: {{ .Values.portal.service.port }}
+{{- end }}
+{{- end }}

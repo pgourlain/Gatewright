@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "apis": [
+    {
+      "name": "orders",
+      "basePath": "/orders",
+      "version": "v1",
+      "backend": {
+        "destinations": [
+          "http://orders:8080"
+        ]
+      },
+      "policies": {
+        "inbound": [
+          {
+            "type": "rateLimit",
+            "config": {
+              "limit": 10,
+              "periodSeconds": 60,
+              "partitionBy": "global",
+              "shared": true,
+              "batchSize": 2
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

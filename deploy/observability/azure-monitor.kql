@@ -1,0 +1,33 @@
+// Azure Monitor (Log Analytics / Application Insights) sample queries. Metric table: customMetrics.
+
+// Requests per minute by API
+customMetrics
+| where name == "gatewright.requests"
+| summarize requests = sum(valueSum) by bin(timestamp, 1m), api = tostring(customDimensions.api)
+| render timechart
+
+// 5xx ratio by API
+customMetrics
+| where name == "gatewright.requests"
+| extend api = tostring(customDimensions.api), cls = tostring(customDimensions.status_class)
+| summarize total = sum(valueSum), errors = sumif(valueSum, cls == "5xx") by bin(timestamp, 5m), api
+| extend ratio = todouble(errors) / total
+| render timechart
+
+// Rejections by cause
+customMetrics
+| where name == "gatewright.rejections"
+| summarize rejections = sum(valueSum) by cause = tostring(customDimensions.cause), bin(timestamp, 5m)
+| render timechart
+
+// Slowest APIs (average duration)
+customMetrics
+| where name == "gatewright.request.duration"
+| summarize avg_ms = sum(valueSum) / sum(valueCount) by api = tostring(customDimensions.api)
+| order by avg_ms desc
+
+// Usage per subscription over the last day
+customMetrics
+| where name == "gatewright.usage.requests" and timestamp > ago(1d)
+| summarize requests = sum(valueSum) by subscription = tostring(customDimensions.subscription), api = tostring(customDimensions.api)
+| order by requests desc

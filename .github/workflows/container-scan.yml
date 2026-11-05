@@ -1,0 +1,34 @@
+name: Container scan
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - { path: src/Gatewright.Host, repository: gatewright-host }
+          - { path: src/Gatewright.Portal, repository: gatewright-portal }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Build image
+        run: >
+          dotnet publish ${{ matrix.project.path }} -c Release -t:PublishContainer
+          -p:ContainerImageTag=scan
+      - name: Scan with Trivy
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: ${{ matrix.project.repository }}:scan
+          severity: CRITICAL,HIGH
+          exit-code: "1"
+          ignore-unfixed: true

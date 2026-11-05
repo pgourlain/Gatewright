@@ -1,0 +1,17 @@
+{{- if eq .Values.gateway.mode "all" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-all
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: all
+spec:
+  type: {{ .Values.all.service.type }}
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "all") .) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.all.service.httpPort }}
+      targetPort: http
+{{- end }}

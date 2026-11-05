@@ -1,0 +1,103 @@
+// Copyright (c) Gatewright contributors.
+// SPDX-License-Identifier: MIT
+
+syntax = "proto3";
+
+package gatewright.distribution.v1;
+
+option csharp_namespace = "Gatewright.Distribution.Grpc";
+
+// Control plane -> data plane configuration distribution.
+// Authentication: "authorization: Bearer <token>" call metadata (and optionally mutual TLS at the transport).
+service ConfigDistribution {
+  // Opens a stream of configuration updates for an environment. The first message is always a full snapshot
+  // unless the node is already at the latest version.
+  rpc Subscribe(SubscribeRequest) returns (stream ServerMessage);
+
+  // Reports the version a node applied (or failed to apply).
+  rpc Ack(AckRequest) returns (AckResponse);
+}
+
+message SubscribeRequest {
+  // Stable identifier of the node (for example the pod name).
+  string node_id = 1;
+  // Environment whose publications the node follows (dev, staging, prod...).
+  string environment = 2;
+  // Last version the node applied, 0 when none. Lets the server skip a snapshot the node already has.
+  int64 last_version = 3;
+  // Hash of the configuration at last_version, to detect divergence.
+  string last_hash = 4;
+  // Version of this protocol spoken by the node.
+  int32 protocol_version = 5;
+}
+
+message ServerMessage {
+  oneof payload {
+    Snapshot snapshot = 1;
+    Delta delta = 2;
+    Heartbeat heartbeat = 3;
+    EndpointsUpdate endpoints = 4;
+    SecretsUpdate secrets = 5;
+  }
+}
+
+// A complete configuration.
+message Snapshot {
+  int64 version = 1;
+  string hash = 2;
+  // GatewayConfig as JSON.
+  bytes config_json = 3;
+}
+
+// The changes between two consecutive versions. Only valid for a node whose current version is from_version.
+message Delta {
+  int64 from_version = 1;
+  int64 to_version = 2;
+  // Hash of the full configuration at to_version, used to verify the result of applying the delta.
+  string to_hash = 3;
+  // ConfigDelta as JSON.
+  bytes delta_json = 4;
+}
+
+message Heartbeat {
+  int64 server_time_unix_ms = 1;
+  // Latest version published for the environment.
+  int64 latest_version = 2;
+}
+
+// The ready addresses behind each discovered service, replacing any previous set. Independent from configuration versions:
+// pods come and go without a new publication.
+message EndpointsUpdate {
+  string hash = 1;
+  // Service reference (namespace/name:port) -> addresses (http://10.0.0.5:8080).
+  map<string, EndpointList> services = 2;
+}
+
+message EndpointList {
+  repeated string addresses = 1;
+}
+
+// The certificate material of every hostname whose certificate source is a Kubernetes secret, replacing any previous set.
+// Read by the control plane, never persisted; sent only over this authenticated channel.
+message SecretsUpdate {
+  // Secret reference (namespace/name) -> certificate material.
+  map<string, SecretMaterial> secrets = 1;
+}
+
+message SecretMaterial {
+  bytes certificate_pem = 1;
+  bytes key_pem = 2;
+}
+
+message AckRequest {
+  string node_id = 1;
+  string environment = 2;
+  int64 version = 3;
+  string hash = 4;
+  // False when the node refused or failed to apply the version.
+  bool applied = 5;
+  // Why it was refused, when applied is false.
+  string error = 6;
+}
+
+message AckResponse {}

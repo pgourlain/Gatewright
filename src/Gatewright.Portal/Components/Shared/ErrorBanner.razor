@@ -1,0 +1,10 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@if (Message is not null)
+{
+    <div class="error" role="alert">@Message</div>
+}
+
+@code {
+    [Parameter] public string? Message { get; set; }
+}

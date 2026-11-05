@@ -1,0 +1,17 @@
+{{- if .Values.portal.enabled }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-portal
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: portal
+spec:
+  type: {{ .Values.portal.service.type }}
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "portal") .) | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ .Values.portal.service.port }}
+      targetPort: http
+{{- end }}

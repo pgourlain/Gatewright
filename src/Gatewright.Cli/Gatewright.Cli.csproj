@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <AssemblyName>gatewright</AssemblyName>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>gatewright</ToolCommandName>
+    <PackageId>Gatewright.Cli</PackageId>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="System.CommandLine" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Core/Gatewright.Core.csproj" />
+    <ProjectReference Include="../Gatewright.Policies/Gatewright.Policies.csproj" />
+  </ItemGroup>
+</Project>

@@ -1,0 +1,5 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../../src/Gatewright.Abstractions/Gatewright.Abstractions.csproj" />
+  </ItemGroup>
+</Project>

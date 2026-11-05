@@ -1,0 +1,6 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <ItemGroup>
+    <ProjectReference Include="../Gatewright.Core/Gatewright.Core.csproj" />
+    <ProjectReference Include="../Gatewright.Distribution/Gatewright.Distribution.csproj" />
+  </ItemGroup>
+</Project>

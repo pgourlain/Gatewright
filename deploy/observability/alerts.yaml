@@ -1,0 +1,24 @@
+# Prometheus alert rules (metric names as exported by the OpenTelemetry Prometheus conventions).
+groups:
+  - name: gatewright
+    rules:
+      - alert: GatewrightHigh5xxRatio
+        expr: |
+          sum(rate(gatewright_requests_total{status_class="5xx"}[5m])) / sum(rate(gatewright_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: critical }
+        annotations:
+          summary: More than 5% of gateway responses are 5xx.
+      - alert: GatewrightHighLatencyP99
+        expr: |
+          histogram_quantile(0.99, sum by (le) (rate(gatewright_request_duration_milliseconds_bucket[5m]))) > 1000
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Gateway p99 latency is above 1 s.
+      - alert: GatewrightConfigVersionDivergence
+        expr: max(gatewright_config_version_applied) - min(gatewright_config_version_applied) > 0
+        for: 10m
+        labels: { severity: warning }
+        annotations:
+          summary: Data plane pods run different configuration versions for more than 10 minutes.

@@ -1,0 +1,20 @@
+{{- if eq .Values.gateway.mode "separate" }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "gatewright.fullname" . }}-controlplane
+  labels:
+    {{- include "gatewright.labels" . | nindent 4 }}
+    app.kubernetes.io/component: controlplane
+spec:
+  type: {{ .Values.controlPlane.service.type }}
+  selector:
+    {{- include "gatewright.selectorLabels" (merge (dict "component" "controlplane") .) | nindent 4 }}
+  ports:
+    - name: admin
+      port: {{ .Values.controlPlane.service.adminPort }}
+      targetPort: admin
+    - name: grpc
+      port: {{ .Values.controlPlane.service.grpcPort }}
+      targetPort: grpc
+{{- end }}

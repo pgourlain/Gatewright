@@ -1,0 +1,142 @@
+@* Copyright (c) Gatewright contributors.
+   SPDX-License-Identifier: MIT *@
+@using System.Text.Json
+@using System.Text.Json.Nodes
+
+<div class="policy-editor">
+    @foreach (var phase in Phases)
+    {
+        <section class="phase" aria-label="@phase policies">
+            <div class="phase-head"><h4>@phase</h4><span class="count">@Lists[phase].Count</span></div>
+            @foreach (var (policy, index) in Lists[phase].Select((p, i) => (p, i)))
+            {
+                var entry = policy;
+                var position = index;
+                var info = Types.FirstOrDefault(t => t.Type == entry.Type);
+                <div class="policy" data-policy="@entry.Type">
+                    <div class="policy-head">
+                        <strong class="mono">@(entry.Ref is null ? entry.Type : "ref: " + entry.Ref)</strong>
+                        <span class="grow"></span>
+                        <select class="inherit" aria-label="Inheritance" @onchange="e => entry.Inheritance = Enum.Parse<PolicyInheritance>(e.Value!.ToString()!, true)" disabled="@(!CanEdit)">
+                            @foreach (var inheritance in Enum.GetValues<PolicyInheritance>())
+                            {
+                                <option value="@inheritance" selected="@(entry.Inheritance == inheritance)">@inheritance</option>
+                            }
+                        </select>
+                        @if (CanEdit)
+                        {
+                            <button type="button" class="btn small" aria-label="Move up" @onclick="() => Move(phase, position, -1)" disabled="@(position == 0)">&uarr;</button>
+                            <button type="button" class="btn small" aria-label="Move down" @onclick="() => Move(phase, position, 1)" disabled="@(position == Lists[phase].Count - 1)">&darr;</button>
+                            <button type="button" class="btn small danger" @onclick="() => Remove(phase, position)">Remove</button>
+                        }
+                    </div>
+                    @if (info is not null && entry.Ref is null)
+                    {
+                        <div class="policy-body"><SchemaForm Schema="info.Schema" Value="entry.Config" ValueChanged="_ => Changed()" /></div>
+                    }
+                </div>
+            }
+            @if (Lists[phase].Count == 0)
+            {
+                <div class="phase-empty">No policy in this phase.</div>
+            }
+            @if (CanEdit)
+            {
+                <select class="add" aria-label="Add a policy to @phase" @onchange="e => Add(phase, e.Value?.ToString())">
+                    <option value="">+ Add a policy…</option>
+                    @foreach (var type in Types.Where(t => t.Phases.Contains(phase)))
+                    {
+                        <option value="@type.Type">@type.Type</option>
+                    }
+                </select>
+            }
+        </section>
+    }
+</div>
+
+@code {
+    private static readonly string[] AllPhases = ["Inbound", "Backend", "Outbound", "OnError"];
+
+    private sealed class Entry
+    {
+        public string? Type { get; set; }
+
+        public string? Ref { get; set; }
+
+        public JsonObject Config { get; set; } = new();
+
+        public PolicyInheritance Inheritance { get; set; }
+    }
+
+    private Dictionary<string, List<Entry>> Lists { get; set; } = AllPhases.ToDictionary(p => p, _ => new List<Entry>());
+
+    private PolicySet? loaded;
+
+    [Parameter, EditorRequired] public PolicySet Policies { get; set; } = PolicySet.Empty;
+    [Parameter, EditorRequired] public IReadOnlyList<PolicyTypeInfo> Types { get; set; } = [];
+    [Parameter] public bool CanEdit { get; set; } = true;
+    [Parameter] public EventCallback<PolicySet> PoliciesChanged { get; set; }
+
+    private IEnumerable<string> Phases => AllPhases;
+
+    protected override void OnParametersSet()
+    {
+        if (ReferenceEquals(loaded, Policies))
+        {
+            return;
+        }
+
+        loaded = Policies;
+        Lists = AllPhases.ToDictionary(
+            p => p,
+            p => Policies.Get(Enum.Parse<Gatewright.Abstractions.PolicyPhase>(p)).Select(r => new Entry
+            {
+                Type = r.Type,
+                Ref = r.Ref,
+                Inheritance = r.Inheritance,
+                Config = r.Config is { ValueKind: JsonValueKind.Object } c ? JsonNode.Parse(c.GetRawText())!.AsObject() : new JsonObject(),
+            }).ToList());
+    }
+
+    private void Add(string phase, string? type)
+    {
+        if (!string.IsNullOrEmpty(type))
+        {
+            Lists[phase].Add(new Entry { Type = type });
+            _ = Changed();
+        }
+    }
+
+    private void Remove(string phase, int index)
+    {
+        Lists[phase].RemoveAt(index);
+        _ = Changed();
+    }
+
+    private void Move(string phase, int index, int delta)
+    {
+        var list = Lists[phase];
+        (list[index], list[index + delta]) = (list[index + delta], list[index]);
+        _ = Changed();
+    }
+
+    private Task Changed()
+    {
+        PolicyReference ToReference(Entry e) => new()
+        {
+            Type = e.Ref is null ? e.Type : null,
+            Ref = e.Ref,
+            Inheritance = e.Inheritance,
+            Config = e.Ref is null && e.Config.Count > 0 ? JsonDocument.Parse(e.Config.ToJsonString()).RootElement.Clone() : null,
+        };
+
+        var set = new PolicySet
+        {
+            Inbound = [.. Lists["Inbound"].Select(ToReference)],
+            Backend = [.. Lists["Backend"].Select(ToReference)],
+            Outbound = [.. Lists["Outbound"].Select(ToReference)],
+            OnError = [.. Lists["OnError"].Select(ToReference)],
+        };
+        return PoliciesChanged.InvokeAsync(set);
+    }
+}

@@ -1,0 +1,23 @@
+# Single gateway process (mode "all") in front of one backend. Config is a JSON file reloaded on change.
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  gateway:
+    image: gatewright/host:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    command: ["--Gateway:Mode=all", "--Gateway:ConfigFile=/config/gateway.json"]
+    volumes:
+      - ./gateway.json:/config/gateway.json:ro
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orders

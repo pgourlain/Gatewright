@@ -1,0 +1,33 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Check license headers
+        run: ./scripts/check-headers.sh
+      - name: Restore
+        run: dotnet restore Gatewright.slnx
+      - name: Build
+        run: dotnet build Gatewright.slnx --no-restore -c Release
+      - name: Format
+        run: dotnet format Gatewright.slnx --verify-no-changes --no-restore
+      - name: Test with coverage
+        run: dotnet test Gatewright.slnx --no-build -c Release --collect:"XPlat Code Coverage" --results-directory ./coverage
+      - name: Upload coverage
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage/**/coverage.cobertura.xml
