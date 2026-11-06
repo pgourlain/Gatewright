@@ -13,6 +13,13 @@ gateway:
   extraEnv: {}
   # Token protecting GET /gw/config; leave empty to disable the endpoint.
   diagnosticsToken: ""
+  shutdown:
+    # Seconds the data plane keeps serving, readiness already failing, after shutdown starts: gives
+    # the Service's Endpoints update time to propagate before the process actually stops (14.2).
+    # The dataPlane preStop hook calls GET /gw/lifecycle/prestop, which performs this same delay
+    # *before* SIGTERM is sent, so Kubernetes draining and this option cover the same window once
+    # (see ReadinessGate.StopAsync, which skips its own delay when preStop already ran it).
+    drainDelaySeconds: 5
 
 image:
   repository: ghcr.io/pgourlain/gatewright-host
@@ -45,6 +52,9 @@ controlPlane:
 
 dataPlane:
   replicaCount: 2
+  # Must stay comfortably above gateway.shutdown.drainDelaySeconds (the preStop hook runs that delay,
+  # then SIGTERM, then the process itself needs a moment to stop) or Kubernetes kills the pod mid-drain.
+  terminationGracePeriodSeconds: 30
   service:
     type: LoadBalancer
     httpPort: 8080
@@ -73,6 +83,8 @@ dataPlane:
 
 # Only used when gateway.mode is "all".
 all:
+  # Same reasoning as dataPlane.terminationGracePeriodSeconds: must stay above gateway.shutdown.drainDelaySeconds.
+  terminationGracePeriodSeconds: 30
   service:
     type: LoadBalancer
     httpPort: 8080

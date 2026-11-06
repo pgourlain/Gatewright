@@ -182,6 +182,10 @@ public sealed class SnapshotTranslator
             Destinations = destinations,
             Metadata = metadata,
             HealthCheck = CreateHealthCheck(backend),
+            // Multiple HTTP/2 connections per destination (YARP/SocketsHttpHandler default to one),
+            // so many concurrent requests to one backend aren't multiplexed over, and queued behind,
+            // a single connection's flow-control window (14.3).
+            HttpClient = new HttpClientConfig { EnableMultipleHttp2Connections = true },
             HttpRequest = backend.Timeout is null && backend.HttpVersion is null
                 ? null
                 : new ForwarderRequestConfig
