@@ -39,6 +39,31 @@ internal static class HealthEndpointExtensions
                 : Results.Text("no valid configuration applied yet", statusCode: StatusCodes.Status503ServiceUnavailable);
         });
 
+        // Kubernetes preStop hook target (httpGet; no shell in the chiseled image to run an exec hook).
+        // Runs the drain delay *before* SIGTERM is sent, so the Service's Endpoints update has time to
+        // propagate to every node before the process actually stops serving (14.2). Unauthenticated,
+        // like /healthz: the kubelet calls it by pod IP, and the worst an unauthorized caller achieves
+        // is marking one pod permanently not-ready, no worse than other unauthenticated reachability.
+        endpoints.MapGet("/gw/lifecycle/prestop", async (IServiceProvider sp, CancellationToken cancellationToken) =>
+        {
+            sp.GetService<ReadinessGate>()?.BeginDrain();
+            var delaySeconds = sp.GetService<IOptions<ShutdownOptions>>()?.Value.DrainDelaySeconds ?? 0;
+            var delay = TimeSpan.FromSeconds(Math.Max(0, delaySeconds));
+            if (delay > TimeSpan.Zero)
+            {
+                try
+                {
+                    await Task.Delay(delay, cancellationToken).ConfigureAwait(false);
+                }
+                catch (OperationCanceledException)
+                {
+                    // The hook itself was cancelled (e.g. terminationGracePeriodSeconds ran out): stop waiting.
+                }
+            }
+
+            return Results.Ok();
+        });
+
         endpoints.MapGet("/gw/config", (HttpContext context, IOptions<GatewayOptions> options, IServiceProvider sp) =>
         {
             if (Authorize(context, options.Value) is { } denied)

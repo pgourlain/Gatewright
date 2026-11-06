@@ -1,0 +1,49 @@
+# Target stack for the load scenarios (14.1): gateway (all mode, database + Redis-backed
+# rate limit), the sample backend, Redis and a static JWKS endpoint for the jwt scenario.
+# Development settings only; not meant to represent a production topology.
+services:
+  orders:
+    image: gatewright/sample-orders:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+      args:
+        PROJECT: samples/backend-orders
+        ASSEMBLY: backend-orders
+
+  redis:
+    image: docker.io/library/redis:7-alpine
+
+  jwks:
+    image: docker.io/library/python:3.13-alpine
+    working_dir: /www
+    command: ["python3", "-m", "http.server", "8080"]
+    volumes:
+      - ./.generated/jwks:/www:ro
+
+  gateway:
+    image: gatewright/host:dev
+    build:
+      context: ../..
+      dockerfile: Dockerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      Gateway__Mode: All
+      Gateway__ConfigSource: Database
+      Gateway__Environment: dev
+      Gateway__ApiKeyPepper: load-test-pepper-change-me
+      ControlPlane__ConnectionString: Data Source=/data/gatewright.db
+      ControlPlane__Auth__DevelopmentBypass: "true"
+      Gateway__DiagnosticsToken: load-diagnostics
+      Redis__ConnectionString: redis:6379
+    volumes:
+      - gateway-data:/data
+    ports:
+      - "8080:8080"
+    depends_on:
+      - orders
+      - redis
+      - jwks
+
+volumes:
+  gateway-data:
