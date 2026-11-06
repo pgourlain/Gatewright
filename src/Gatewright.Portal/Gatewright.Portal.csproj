@@ -10,6 +10,7 @@
     <ContainerLabel Include="org.opencontainers.image.licenses" Value="MIT" />
     <ContainerLabel Include="org.opencontainers.image.source" Value="$(RepositoryUrl)" />
     <ContainerLabel Include="org.opencontainers.image.version" Value="$(Version)" />
+    <ContainerLabel Include="org.opencontainers.image.revision" Value="$(SourceRevisionId)" />
   </ItemGroup>
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.OpenIdConnect" />

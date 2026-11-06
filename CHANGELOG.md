@@ -78,6 +78,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Explicit, tunable request limits (`Gateway:Limits`: body size, header size and count, request line, headers timeout, minimum body data rate), validated at startup (#15.1)
 - Defensive headers (`nosniff`, `no-store`, CSP, `Referrer-Policy`) on gateway-produced responses (`/admin`, `/gw`, health) (#15.1)
 - Security guide with STRIDE threat model and production hardening checklist (`docs/user/security.md`) (#15.1)
+- `Gatewright.Templates` NuGet package (`dotnet new install Gatewright.Templates`) and an `org.opencontainers.image.revision` label on the container images (#15.4)
+- User documentation: index, declaring APIs, operations, upgrades, compatibility and versioning policy with the control plane / data plane (N-1) matrix (#15.2, #15.3)
 
 ### Changed
 

@@ -1,0 +1,21 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <!-- NuGet package of the `dotnet new gatewright-host` template: `dotnet new install Gatewright.Templates`. -->
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <PackageId>Gatewright.Templates</PackageId>
+    <PackageType>Template</PackageType>
+    <Description>dotnet new template for a Gatewright host: a gateway distribution with a sample custom policy, tests and a container build.</Description>
+    <PackageTags>dotnet-new;templates;gatewright;api-gateway</PackageTags>
+    <IncludeBuildOutput>false</IncludeBuildOutput>
+    <IncludeContentInPack>true</IncludeContentInPack>
+    <ContentTargetFolders>content</ContentTargetFolders>
+    <EnableDefaultItems>false</EnableDefaultItems>
+    <NoWarn>$(NoWarn);NU5128</NoWarn>
+    <GenerateDocumentationFile>false</GenerateDocumentationFile>
+    <NoDefaultExcludes>true</NoDefaultExcludes>
+    <IncludeSymbols>false</IncludeSymbols>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="../gatewright-host/**/*" Exclude="../gatewright-host/**/bin/**;../gatewright-host/**/obj/**" PackagePath="content/gatewright-host" />
+  </ItemGroup>
+</Project>

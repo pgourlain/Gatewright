@@ -1,0 +1,256 @@
+# Copyright (c) Gatewright contributors.
+# SPDX-License-Identifier: MIT
+#
+# Release pipeline (task 15.4), triggered by a `v*` tag (for example v1.0.0 or v0.0.1-rc.1).
+# verify -> packages -> images + chart -> NuGet publication -> GitHub Release.
+# Procedure and required repository settings: docs/release.md.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+env:
+  DOTNET_NOLOGO: "true"
+  DOTNET_CLI_TELEMETRY_OPTOUT: "true"
+
+jobs:
+  prepare:
+    name: Resolve version
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      prerelease: ${{ steps.v.outputs.prerelease }}
+      owner: ${{ steps.v.outputs.owner }}
+    steps:
+      - id: v
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z.-]+)?$ ]]; then
+            echo "Tag '$GITHUB_REF_NAME' is not a SemVer version (vMAJOR.MINOR.PATCH[-prerelease])." >&2
+            exit 1
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          if [[ "$version" == *-* ]]; then echo "prerelease=true" >> "$GITHUB_OUTPUT"; else echo "prerelease=false" >> "$GITHUB_OUTPUT"; fi
+          echo "owner=$(echo "$GITHUB_REPOSITORY_OWNER" | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+
+  verify:
+    name: Build, test and license check
+    needs: prepare
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Release notes exist
+        run: ./scripts/extract-changelog.sh "${{ needs.prepare.outputs.version }}" > /dev/null
+      - name: License headers
+        run: ./scripts/check-headers.sh
+      - run: dotnet restore Gatewright.slnx
+      - run: dotnet build Gatewright.slnx --no-restore -c Release
+      - run: dotnet format Gatewright.slnx --verify-no-changes --no-restore
+      - run: dotnet test Gatewright.slnx --no-build -c Release
+      - name: Dependency licenses
+        run: |
+          dotnet tool install --global nuget-license
+          nuget-license -i Gatewright.slnx -t -a build/allowed-licenses.json -ignore build/ignored-packages.json -override build/license-overrides.json -o JsonPretty > /dev/null
+      - name: Helm lint
+        run: helm lint deploy/helm/gatewright
+
+  packages:
+    name: Pack NuGet packages and notices
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - name: Generate THIRD-PARTY-NOTICES.md
+        run: |
+          dotnet restore Gatewright.slnx
+          dotnet tool install --global nuget-license
+          ./scripts/generate-third-party-notices.sh
+      - name: Pack (version comes from the tag through MinVer)
+        run: dotnet pack Gatewright.slnx -c Release -o artifacts/packages
+      - name: Pack the dotnet new template (defaults to this release of the SDK)
+        run: |
+          sed -i 's|"defaultValue": "0.0.0-preview.\*"|"defaultValue": "${{ needs.prepare.outputs.version }}"|' templates/gatewright-host/.template.config/template.json
+          grep -q '"defaultValue": "${{ needs.prepare.outputs.version }}"' templates/gatewright-host/.template.config/template.json
+          dotnet pack templates/Gatewright.Templates -c Release -o artifacts/packages
+      - name: Check the packed version
+        run: |
+          expected="${{ needs.prepare.outputs.version }}"
+          ls artifacts/packages
+          ls artifacts/packages/*.nupkg | grep -q "\.${expected}\.nupkg$" || { echo "No package with version $expected" >&2; exit 1; }
+      - uses: actions/upload-artifact@v7
+        with:
+          name: packages
+          path: |
+            artifacts/packages/*.nupkg
+            artifacts/packages/*.snupkg
+      - uses: actions/upload-artifact@v7
+        with:
+          name: third-party-notices
+          path: THIRD-PARTY-NOTICES.md
+
+  images:
+    name: Image ${{ matrix.image.repository }}
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      id-token: write
+      attestations: write
+    strategy:
+      fail-fast: false
+      matrix:
+        image:
+          - { path: src/Gatewright.Host, repository: gatewright-host }
+          - { path: src/Gatewright.Portal, repository: gatewright-portal }
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push a multi-arch image (linux-x64, linux-arm64)
+        id: push
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          owner="${{ needs.prepare.outputs.owner }}"
+          tags="$version"
+          if [[ "${{ needs.prepare.outputs.prerelease }}" == "false" ]]; then
+            IFS=. read -r major minor _ <<<"$version"
+            tags="$version;$major.$minor;$major;latest"
+          fi
+          dotnet publish ${{ matrix.image.path }} -c Release -t:PublishContainer \
+            -p:ContainerRuntimeIdentifiers='"linux-x64;linux-arm64"' \
+            -p:ContainerRegistry=ghcr.io \
+            -p:ContainerRepository="$owner/${{ matrix.image.repository }}" \
+            -p:ContainerImageTags='"'"$tags"'"'
+          ref="ghcr.io/$owner/${{ matrix.image.repository }}:$version"
+          digest="$(docker buildx imagetools inspect "$ref" --format '{{json .Manifest.Digest}}' | tr -d '"')"
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+          echo "ref=ghcr.io/$owner/${{ matrix.image.repository }}" >> "$GITHUB_OUTPUT"
+      - name: Verify the OCI labels
+        run: |
+          ref="${{ steps.push.outputs.ref }}@${{ steps.push.outputs.digest }}"
+          docker buildx imagetools inspect "$ref" --format '{{json .Image}}' | grep -q 'org.opencontainers.image.licenses' \
+            || docker buildx imagetools inspect "$ref" --raw | grep -q 'org.opencontainers.image.licenses'
+      - name: Build provenance attestation (SLSA)
+        uses: actions/attest-build-provenance@v3
+        with:
+          subject-name: ${{ steps.push.outputs.ref }}
+          subject-digest: ${{ steps.push.outputs.digest }}
+          push-to-registry: true
+      - name: SBOM (CycloneDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.push.outputs.ref }}@${{ steps.push.outputs.digest }}
+          format: cyclonedx-json
+          output-file: sbom-${{ matrix.image.repository }}.cdx.json
+          upload-artifact: false
+      - uses: actions/upload-artifact@v7
+        with:
+          name: sbom-${{ matrix.image.repository }}
+          path: sbom-${{ matrix.image.repository }}.cdx.json
+
+  chart:
+    name: Publish Helm chart
+    needs: [prepare, verify]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: azure/setup-helm@v5
+      - name: Package and push (OCI)
+        run: |
+          version="${{ needs.prepare.outputs.version }}"
+          owner="${{ needs.prepare.outputs.owner }}"
+          echo "${{ secrets.GITHUB_TOKEN }}" | helm registry login ghcr.io --username "${{ github.actor }}" --password-stdin
+          helm package deploy/helm/gatewright --version "$version" --app-version "$version" --destination artifacts/chart
+          helm push "artifacts/chart/gatewright-$version.tgz" "oci://ghcr.io/$owner/charts"
+      - uses: actions/upload-artifact@v7
+        with:
+          name: chart
+          path: artifacts/chart/*.tgz
+
+  nuget:
+    name: Publish to NuGet.org
+    needs: [prepare, packages, images, chart]
+    runs-on: ubuntu-latest
+    # Publish only from the repository itself, never from a fork.
+    if: github.repository_owner == 'pgourlain'
+    environment: nuget
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - uses: actions/setup-dotnet@v6
+        with:
+          dotnet-version: 10.0.x
+      - uses: actions/download-artifact@v8
+        with:
+          name: packages
+          path: packages
+      - name: Trusted Publishing login (short-lived API key)
+        id: login
+        if: vars.NUGET_USER != ''
+        uses: NuGet/login@v1
+        with:
+          user: ${{ vars.NUGET_USER }}
+      - name: Push packages
+        env:
+          NUGET_KEY: ${{ steps.login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
+        run: |
+          if [[ -z "$NUGET_KEY" ]]; then
+            echo "Neither Trusted Publishing (vars.NUGET_USER) nor secrets.NUGET_API_KEY is configured." >&2
+            exit 1
+          fi
+          dotnet nuget push "packages/*.nupkg" --api-key "$NUGET_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate
+
+  release:
+    name: GitHub Release
+    needs: [prepare, packages, images, chart, nuget]
+    # Run even if the NuGet job was skipped (forks), but not when anything failed.
+    if: ${{ !cancelled() && !failure() }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/download-artifact@v8
+        with:
+          path: assets
+      - name: Release notes from CHANGELOG.md
+        run: ./scripts/extract-changelog.sh "${{ needs.prepare.outputs.version }}" > release-notes.md
+      - name: Create the release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          flags=()
+          if [[ "${{ needs.prepare.outputs.prerelease }}" == "true" ]]; then flags+=(--prerelease); fi
+          gh release create "$GITHUB_REF_NAME" --title "$GITHUB_REF_NAME" --notes-file release-notes.md --verify-tag "${flags[@]}" \
+            assets/packages/* assets/chart/* assets/sbom-*/* assets/third-party-notices/THIRD-PARTY-NOTICES.md
