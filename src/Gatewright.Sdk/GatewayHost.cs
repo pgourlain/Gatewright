@@ -32,7 +32,11 @@ public sealed class GatewayHostBuilder
     {
         Builder = builder;
         // One fewer header to write on every response, and no "Server: Kestrel" leaked to clients (14.3).
-        builder.WebHost.ConfigureKestrel(options => options.AddServerHeader = false);
+        builder.WebHost.ConfigureKestrel((context, options) =>
+        {
+            options.AddServerHeader = false;
+            RequestLimits.Apply(context.Configuration, options.Limits);
+        });
         builder.WebHost.UseGatewrightTls(builder.Configuration);
         builder.AddGatewrightTelemetry();
 
@@ -103,6 +107,7 @@ public sealed class GatewayHostBuilder
             app.MapAdminApi();
         }
 
+        app.UseMiddleware<SecurityHeadersMiddleware>();
         app.MapGet("/", () => "Gatewright");
         app.MapGatewrightHealth();
         if (components.Contains("data-plane"))

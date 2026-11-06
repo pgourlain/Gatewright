@@ -75,6 +75,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Helm chart: `redis.dev.enabled`/`postgres.dev.enabled` bundle a single dev-only Redis/PostgreSQL in the same release, for trying things out without an external Redis or PostgreSQL (#13.5)
 - `scripts/k8s-e2e.sh` and CI workflow: end-to-end test of the Helm chart on a real Kubernetes cluster — install, Kubernetes service discovery, Admin API, publish, proxy round trip (#13.6)
 - `GET /gw/lifecycle/prestop` and Helm chart value `gateway.shutdown.drainDelaySeconds` (default 5s): the data plane and `all`-mode Deployments now wire this as a Kubernetes `preStop` hook, so a terminating pod keeps serving, already marked not-ready, until the Service's Endpoints update has had time to reach every node before the process actually stops (#14.2)
+- Explicit, tunable request limits (`Gateway:Limits`: body size, header size and count, request line, headers timeout, minimum body data rate), validated at startup (#15.1)
+- Defensive headers (`nosniff`, `no-store`, CSP, `Referrer-Policy`) on gateway-produced responses (`/admin`, `/gw`, health) (#15.1)
+- Security guide with STRIDE threat model and production hardening checklist (`docs/user/security.md`) (#15.1)
 
 ### Changed
 
@@ -94,5 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Data plane pods could drop requests during a scale-down or a rolling update: without a `preStop` hook, Kubernetes sent `SIGTERM` the instant a pod was marked for deletion, before the Service's Endpoints update had reached every node, so some in-flight connections landed on a pod already gone from the Endpoints list. Fixed by the `preStop` hook above (#14.2)
 
 ### Security
+
+- `headers` policy: header names and literal values containing CR, LF, NUL or delimiter characters are rejected when the policy is compiled, and control characters are stripped from values resolved from claims, request headers and variables, so a crafted claim or header can no longer inject headers. **BREAKING (minor):** a configuration with an invalid header name now fails validation (#15.1)
 
 [Unreleased]: https://github.com/pgourlain/gatewright/commits/main

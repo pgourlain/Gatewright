@@ -58,10 +58,38 @@ public sealed class HeadersPolicy : PolicyBase<HeadersConfig>
             _remove = remove;
         }
 
-        public static Compiled From(HeaderOperations? operations) => new(
-            [.. (operations?.Set ?? []).Select(p => (p.Key, VariableTemplate.Parse(p.Value)))],
-            [.. (operations?.Append ?? []).Select(p => (p.Key, VariableTemplate.Parse(p.Value)))],
-            [.. operations?.Remove ?? []]);
+        public static Compiled From(HeaderOperations? operations)
+        {
+            var set = operations?.Set ?? [];
+            var append = operations?.Append ?? [];
+            foreach (var name in set.Keys.Concat(append.Keys).Concat(operations?.Remove ?? []))
+            {
+                ValidateName(name);
+            }
+
+            foreach (var literal in set.Values.Concat(append.Values))
+            {
+                if (literal.AsSpan().IndexOfAny('\r', '\n', '\0') >= 0)
+                {
+                    throw new ArgumentException("Header values cannot contain CR, LF or NUL characters.");
+                }
+            }
+
+            return new(
+                [.. set.Select(p => (p.Key, VariableTemplate.Parse(p.Value)))],
+                [.. append.Select(p => (p.Key, VariableTemplate.Parse(p.Value)))],
+                [.. operations?.Remove ?? []]);
+        }
+
+        private static void ValidateName(string name)
+        {
+            // RFC 9110 token: visible ASCII without delimiters. Rejects CR/LF, spaces and ':' used to smuggle a second header.
+            const string Delimiters = "\"(),/:;<=>?@[\\]{}";
+            if (name.Length == 0 || name.Any(c => c <= ' ' || c >= '\u007F' || Delimiters.Contains(c, StringComparison.Ordinal)))
+            {
+                throw new ArgumentException($"'{name}' is not a valid header name.");
+            }
+        }
 
         public void Apply(IHeaderDictionary headers, GatewayContext context)
         {

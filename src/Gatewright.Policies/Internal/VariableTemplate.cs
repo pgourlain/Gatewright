@@ -72,7 +72,28 @@ internal sealed class VariableTemplate
         var builder = new StringBuilder();
         foreach (var segment in _segments)
         {
-            builder.Append(segment.Variable is null ? segment.Literal : Resolve(segment.Variable, context));
+            builder.Append(segment.Variable is null ? segment.Literal : StripControlCharacters(Resolve(segment.Variable, context)));
+        }
+
+        return builder.ToString();
+    }
+
+    /// <summary>Removes CR, LF and other control characters from a resolved value so that attacker-controlled input (claims, request headers) cannot inject headers.</summary>
+    internal static string StripControlCharacters(string value)
+    {
+        var index = value.AsSpan().IndexOfAnyExceptInRange('\u0020', '\u007E');
+        if (index < 0)
+        {
+            return value;
+        }
+
+        var builder = new StringBuilder(value.Length);
+        foreach (var c in value)
+        {
+            if (c == '\t' || (c >= ' ' && c != '\u007F' && !char.IsControl(c)))
+            {
+                builder.Append(c);
+            }
         }
 
         return builder.ToString();

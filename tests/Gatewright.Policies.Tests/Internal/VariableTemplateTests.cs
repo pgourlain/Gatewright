@@ -61,4 +61,16 @@ public sealed class VariableTemplateTests
 
         VariableTemplate.Parse("[{subscription.id}]").Evaluate(context).ShouldBe("[]");
     }
+
+    [Fact]
+    public void Evaluate_HeaderValueWithLineBreaks_StripsControlCharacters()
+    {
+        var context = Context();
+        context.HttpContext.Request.Headers["x-in"] = "a\r\nSet-Cookie: x=1";
+        context.Variables["v"] = "ok\0\u007F\tend";
+
+        VariableTemplate.Parse("{header:x-in}").Evaluate(context).ShouldNotContain("\n");
+        VariableTemplate.Parse("{header:x-in}").Evaluate(context).ShouldNotContain("\r");
+        VariableTemplate.Parse("{var:v}").Evaluate(context).ShouldBe("ok\tend");
+    }
 }
