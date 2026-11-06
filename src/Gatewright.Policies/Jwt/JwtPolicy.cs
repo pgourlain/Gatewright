@@ -157,7 +157,17 @@ public sealed class JwtPolicy : PolicyBase<JwtConfig>
 
             foreach (var (name, values) in _requiredClaims)
             {
-                if (!principal.Claims.Any(c => c.Type == name && Array.IndexOf(values, c.Value) >= 0))
+                var found = false;
+                foreach (var claim in principal.Claims)
+                {
+                    if (claim.Type == name && Array.IndexOf(values, claim.Value) >= 0)
+                    {
+                        found = true;
+                        break;
+                    }
+                }
+
+                if (!found)
                 {
                     return PolicyResult.Reject(403, "claim_mismatch", $"Required claim '{name}' is missing or has an unexpected value.");
                 }
@@ -167,6 +177,7 @@ public sealed class JwtPolicy : PolicyBase<JwtConfig>
             return PolicyResult.Continue;
         }
 
+        // No LINQ: this resolver runs on every signed-token request (CLAUDE.md D7, hot path).
         private static IEnumerable<SecurityKey> SelectKeys(JwksHandle handle, string? kid)
         {
             var keys = handle.Keys;
@@ -175,15 +186,25 @@ public sealed class JwtPolicy : PolicyBase<JwtConfig>
                 return keys;
             }
 
-            var matches = keys.Where(k => k.KeyId == kid).ToArray();
-            if (matches.Length == 0)
+            List<SecurityKey>? matches = null;
+            for (var i = 0; i < keys.Count; i++)
+            {
+                if (keys[i].KeyId == kid)
+                {
+                    (matches ??= new List<SecurityKey>(1)).Add(keys[i]);
+                }
+            }
+
+            if (matches is null)
             {
                 handle.RequestRefresh();
+                return [];
             }
 
             return matches;
         }
 
+        // No LINQ: runs on every request when requiredScopes is configured (CLAUDE.md D7, hot path).
         private bool HasScopes(ClaimsPrincipal principal)
         {
             if (_requiredScopes.Length == 0)
@@ -191,11 +212,44 @@ public sealed class JwtPolicy : PolicyBase<JwtConfig>
                 return true;
             }
 
-            var granted = principal.Claims
-                .Where(c => c.Type is "scp" or "scope")
-                .SelectMany(c => c.Value.Split(' ', StringSplitOptions.RemoveEmptyEntries))
-                .ToHashSet(StringComparer.Ordinal);
-            return _requiredScopes.All(granted.Contains);
+            Span<bool> satisfied = _requiredScopes.Length <= 64 ? stackalloc bool[_requiredScopes.Length] : new bool[_requiredScopes.Length];
+            var remaining = _requiredScopes.Length;
+            foreach (var claim in principal.Claims)
+            {
+                if (claim.Type is not ("scp" or "scope"))
+                {
+                    continue;
+                }
+
+                var scopes = claim.Value.AsSpan();
+                while (!scopes.IsEmpty)
+                {
+                    var separator = scopes.IndexOf(' ');
+                    var scope = separator < 0 ? scopes : scopes[..separator];
+                    for (var i = 0; i < _requiredScopes.Length; i++)
+                    {
+                        if (!satisfied[i] && scope.SequenceEqual(_requiredScopes[i]))
+                        {
+                            satisfied[i] = true;
+                            remaining--;
+                        }
+                    }
+
+                    if (separator < 0)
+                    {
+                        break;
+                    }
+
+                    scopes = scopes[(separator + 1)..];
+                }
+
+                if (remaining == 0)
+                {
+                    return true;
+                }
+            }
+
+            return remaining == 0;
         }
     }
 

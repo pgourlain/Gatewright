@@ -121,6 +121,8 @@ Common environment variables for every Gatewright process.
 {{- define "gatewright.commonEnv" -}}
 - name: Gateway__Environment
   value: {{ .Values.gateway.environment | quote }}
+- name: Gateway__Shutdown__DrainDelaySeconds
+  value: {{ .Values.gateway.shutdown.drainDelaySeconds | quote }}
 {{- if .Values.gateway.diagnosticsToken }}
 - name: Gateway__DiagnosticsToken
   valueFrom:

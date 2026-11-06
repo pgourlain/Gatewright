@@ -1,0 +1,43 @@
+# Copyright (c) Gatewright contributors.
+# SPDX-License-Identifier: MIT
+#
+# Manual publication of the container images to GitHub Container Registry, for testing before the
+# release pipeline (task 15.4) exists. Tags: "edge" (moves) and the short commit SHA (immutable).
+name: Publish image (manual)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        project:
+          - { path: src/Gatewright.Host, repository: gatewright-host }
+          - { path: src/Gatewright.Portal, repository: gatewright-portal }
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Log in to ghcr.io
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and push
+        run: |
+          owner="$(echo "${{ github.repository_owner }}" | tr '[:upper:]' '[:lower:]')"
+          sha="$(git rev-parse --short=12 HEAD)"
+          dotnet publish ${{ matrix.project.path }} -c Release -t:PublishContainer \
+            -p:ContainerRegistry=ghcr.io \
+            -p:ContainerRepository="$owner/${{ matrix.project.repository }}" \
+            -p:ContainerImageTags='"edge;'"$sha"'"'
