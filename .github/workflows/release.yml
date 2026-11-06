@@ -144,6 +144,7 @@ jobs:
             tags="$version;$major.$minor;$major;latest"
           fi
           dotnet publish ${{ matrix.image.path }} -c Release -t:PublishContainer \
+            -p:Version="$version" \
             -p:ContainerRuntimeIdentifiers='"linux-x64;linux-arm64"' \
             -p:ContainerRegistry=ghcr.io \
             -p:ContainerRepository="$owner/${{ matrix.image.repository }}" \

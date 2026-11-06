@@ -4,11 +4,12 @@
     <!-- `dotnet publish -t:PublishContainer`: non-root, chiseled (minimal attack surface; "-extra" variant resolved automatically for globalization/SQLite). -->
     <ContainerRepository>gatewright-host</ContainerRepository>
     <ContainerFamily>noble-chiseled</ContainerFamily>
+    <!-- Restore must know the RIDs of the multi-arch image built by the release pipeline (ContainerRuntimeIdentifiers). -->
+    <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
   </PropertyGroup>
   <ItemGroup>
     <ContainerLabel Include="org.opencontainers.image.licenses" Value="MIT" />
     <ContainerLabel Include="org.opencontainers.image.source" Value="$(RepositoryUrl)" />
-    <ContainerLabel Include="org.opencontainers.image.version" Value="$(Version)" />
     <ContainerLabel Include="org.opencontainers.image.revision" Value="$(SourceRevisionId)" />
   </ItemGroup>
   <ItemGroup>
