@@ -1,0 +1,67 @@
+{
+  "version": 1,
+  "apis": [
+    {
+      "name": "bare",
+      "basePath": "/bare",
+      "version": "v1",
+      "backend": { "destinations": ["http://localhost:5101"] }
+    },
+    {
+      "name": "secured",
+      "basePath": "/secured",
+      "version": "v1",
+      "backend": { "destinations": ["http://localhost:5101"] },
+      "policies": {
+        "inbound": [
+          {
+            "type": "jwt",
+            "config": {
+              "required": true,
+              "issuers": [
+                {
+                  "issuer": "https://load.test",
+                  "audiences": ["api://load"],
+                  "jwksUri": "http://localhost:8091/jwks.json",
+                  "refreshIntervalSeconds": 3600
+                }
+              ]
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "limited",
+      "basePath": "/limited",
+      "version": "v1",
+      "backend": { "destinations": ["http://localhost:5101"] },
+      "policies": {
+        "inbound": [
+          {
+            "type": "jwt",
+            "config": {
+              "required": true,
+              "issuers": [
+                {
+                  "issuer": "https://load.test",
+                  "audiences": ["api://load"],
+                  "jwksUri": "http://localhost:8091/jwks.json",
+                  "refreshIntervalSeconds": 3600
+                }
+              ]
+            }
+          },
+          {
+            "type": "rateLimit",
+            "config": {
+              "limit": 1000000,
+              "periodSeconds": 1,
+              "partitionBy": "ip"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}
