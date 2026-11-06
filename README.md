@@ -27,6 +27,7 @@ A runnable local setup (mode `all`, file configuration) arrives with phase 2 of 
 
 ## Documentation
 
+- Deploy on a Kubernetes cluster, copy-paste, every mode and database: [docs/user/quickstart-cluster.md](docs/user/quickstart-cluster.md)
 - Architecture and pods to deploy per mode: [docs/user/architecture.md](docs/user/architecture.md)
 - Architecture decisions: [docs/adr](docs/adr)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
