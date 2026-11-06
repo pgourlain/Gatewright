@@ -42,6 +42,28 @@ public sealed class ResiliencePolicyTests
     }
 
     [Fact]
+    public async Task Timeout_ManyConcurrentHungRequests_AllFailFast_AndTheGatewayStaysResponsive()
+    {
+        // Chaos (14.5): a backend that hangs under load must cost the gateway one bounded timeout per
+        // request, not exhaust it - requests after the storm are served at normal speed.
+        await using var gateway = await StartAsync([["timeout", """{"seconds":0.3}"""]]);
+        var stopwatch = System.Diagnostics.Stopwatch.StartNew();
+
+        var storm = await Task.WhenAll(Enumerable.Range(0, 200).Select(_ => SendAsync(gateway, "/api/slow/30000")));
+
+        stopwatch.Stop();
+        // 504 is the contract; a 502 is tolerated for the few connections the burst makes the (test) backend reset
+        // instead of letting them time out. Either way: bounded, fast, and no hang.
+        storm.ShouldAllBe(r => r.StatusCode == HttpStatusCode.GatewayTimeout || r.StatusCode == HttpStatusCode.BadGateway);
+        storm.Count(r => r.StatusCode == HttpStatusCode.GatewayTimeout).ShouldBeGreaterThan(storm.Length / 2);
+        stopwatch.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(10));
+
+        var after = System.Diagnostics.Stopwatch.StartNew();
+        (await SendAsync(gateway, "/api/slow/10")).StatusCode.ShouldBe(HttpStatusCode.OK);
+        after.Elapsed.ShouldBeLessThan(TimeSpan.FromSeconds(2));
+    }
+
+    [Fact]
     public async Task Timeout_FastBackend_PassesThrough()
     {
         await using var gateway = await StartAsync([["timeout", """{"seconds":2}"""]]);

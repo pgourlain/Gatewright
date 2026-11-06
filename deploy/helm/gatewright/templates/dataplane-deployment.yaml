@@ -25,6 +25,7 @@ spec:
     spec:
       # No Kubernetes RBAC: only the control plane reads the Kubernetes API (CLAUDE.md security rule).
       automountServiceAccountToken: false
+      terminationGracePeriodSeconds: {{ .Values.dataPlane.terminationGracePeriodSeconds }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -52,6 +53,16 @@ spec:
               mountPath: /tmp
             - name: dataprotection-keys
               mountPath: /home/app/.aspnet
+          lifecycle:
+            preStop:
+              # Blocks Kubernetes from sending SIGTERM until the Service's Endpoints update (removing
+              # this pod) has had time to propagate to every node's kube-proxy (14.2 scale-in/rolling-
+              # update finding: without this, requests land on a pod already gone from the Endpoints
+              # list but not yet actually stopped). No shell in the chiseled image, hence httpGet
+              # rather than exec.
+              httpGet:
+                path: /gw/lifecycle/prestop
+                port: http
           livenessProbe:
             httpGet:
               path: /healthz

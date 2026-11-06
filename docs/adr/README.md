@@ -12,5 +12,6 @@
 - [0010](0010-single-image-for-cp-and-dp.md) — D10 — Same image for control plane and data plane
 - [0011](0011-tls-termination-flexibility.md) — D11 — TLS may be terminated upstream or by Gatewright
 - [0012](0012-mit-license.md) — Choice of the MIT license
+- [0013](0013-native-aot-not-pursued.md) — Native AOT not pursued for V1
 
 A decision that contradicts an accepted ADR requires a new ADR superseding it.
