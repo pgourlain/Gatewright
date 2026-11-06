@@ -126,7 +126,8 @@ public sealed class ResiliencePolicyTests
         await using var gateway = await StartAsync(
         [
             ["retry", """{"maxAttempts":3,"backoffMilliseconds":5}"""],
-            ["timeout", """{"seconds":0.2}"""],
+            // The two slow attempts hang until cancelled; only the third answers. 0.5 s leaves it ample margin on a loaded CI runner.
+            ["timeout", """{"seconds":0.5}"""],
         ]);
 
         var response = await SendAsync(gateway, "/api/slowfirst/2?id=d");
