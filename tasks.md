@@ -284,13 +284,44 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 
 ---
 
+## Phase 16 — Developer portal (post-1.0, promoted from the Backlog on 2026-11-06)
+
+> Goal: external API consumers discover the APIs of each product, read interactive documentation, request a subscription and manage their own keys, without any access to the Admin API or the admin portal.
+> Status: **planned, not started**. Decisions 16.0 must be validated by the maintainer before any code.
+
+- [ ] **16.0 Decisions** (ADR `docs/adr/0014-developer-portal.md`, human validation required):
+  (a) identity provider for external developers (proposal: any OIDC provider, Entra External ID documented first; GitHub as a second option);
+  (b) separate application `Gatewright.DeveloperPortal` exposed to the internet, distinct from the private admin portal (proposal: yes, keeps the 15.1 threat model where `/admin` and the admin portal stay private);
+  (c) approval mode per product: `automatic` or `manual` (proposal: per-product setting, default `manual`);
+  (d) email notifications in V1 or later (proposal: later; V1 shows request status in the portal and exposes an outgoing webhook).
+  AC: ADR accepted; CLAUDE.md §2/§4 updated (new project, new trust boundary).
+- [ ] **16.1 Developer identity**: link an external OIDC identity (`iss` + `sub`) to a `ConsumerEntity` (new `DeveloperAccount` entity, EF migration for SQLite and PostgreSQL); first sign-in creates the account (sign-up can be disabled: `DeveloperPortal:SignUp=Closed|Open`); an admin can invite / disable a developer.
+  AC: two identities never see each other's consumer; disabling an account revokes portal access immediately; tests for both providers' claim shapes.
+- [ ] **16.2 Consumer API** (`/developer/v1`, control plane, distinct from `/admin/v1`): products visible to the caller, own subscriptions, subscription requests, own keys (create — shown once —, rotate, revoke), own usage. Every query is filtered by the caller's consumer id at the data access layer, not only in the endpoint. Rate limited, audited.
+  AC: authorization tests prove that no `/developer/v1` endpoint can read or change another consumer's data (IDOR tests per endpoint); `/admin/v1` tokens are refused and vice versa.
+- [ ] **16.3 Product visibility**: `ProductEntity` gains `Visibility` (`Private` default, `Public`, `Invitation`) and `ApprovalMode` (`Automatic`, `Manual`); editable in the Admin API, the admin portal and the declarative export (export format stays `gatewright/v1`, additive optional fields).
+  AC: existing exports import unchanged; a `Private` product is never listed on the developer side.
+- [ ] **16.4 OpenAPI per product** (Backlog item "OpenAPI document exposed per product"): keep the source OpenAPI document of each imported API with its revision; produce a per-product document merging the product's published APIs, with gateway paths (base path), the security scheme matching the product's policies (`apiKey` header / `jwt`), and `x-gateway` removed. APIs declared without an OpenAPI document get a minimal document generated from their operations.
+  AC: generated documents validate against the OpenAPI 3.1 schema; internal backend addresses and policy details never appear in them (test).
+- [ ] **16.5 Subscription request workflow**: `SubscriptionRequest` (`Pending`, `Approved`, `Rejected`, `Cancelled`) with requester, product, plan, justification, decider and reason; `Automatic` products approve at once; `Publisher`/`Admin` approve or reject from the Admin API and the admin portal (new "Requests" page); approval creates the subscription; each transition is audited and can trigger an outgoing webhook (`DeveloperPortal:Webhooks`).
+  AC: end-to-end test request → approval → key → call through the gateway → `200`; rejection never creates a subscription.
+- [ ] **16.6 `Gatewright.DeveloperPortal` application** (Blazor, same design system as the admin portal, own container image `gatewright-developer-portal`, non-root chiseled, read-only root filesystem): catalog by product, product page with interactive documentation (renderer chosen in 16.0 after license check, e.g. Scalar or Swagger UI, both MIT), "Try it" with the developer's own key, subscription requests and status, key management, usage charts per subscription. Talks only to `/developer/v1`.
+  AC: pages rendered and checked in light and dark themes; a signed-in developer completes the 16.5 journey through the UI only; accessibility basics (keyboard navigation, labels, contrast).
+- [ ] **16.7 Security hardening of the new surface**: STRIDE update in `docs/user/security.md` (new internet-facing boundary), CSRF/antiforgery, strict CSP for the developer portal, rate limits on sign-up, key creation and request endpoints, keys shown once and never logged, audit of every developer action.
+  AC: threat model updated and reviewed; tests for rate limits and for keys absent from logs.
+- [ ] **16.8 Packaging and deployment**: Helm chart `developerPortal.*` values (disabled by default, own Service/Ingress, NetworkPolicy allowing it to reach only the control plane's `/developer/v1`), release pipeline builds and publishes the new image, sample `samples/08-developer-portal` (compose: gateway + admin portal + developer portal + a local OIDC provider).
+  AC: `helm lint` green; sample journey reproducible from its README; k8s e2e extended with a developer-portal smoke test.
+- [ ] **16.9 Documentation**: `docs/user/developer-portal.md` (setup, identity provider, visibility and approval, webhooks, customization: logo, colors, legal pages), CHANGELOG entries, README.
+  AC: docs reviewed; Definition of done of a phase (§10) met.
+
+---
+
 ## Backlog (outside V1 scope, do not implement without approval)
 
 - CEL expressions in policies (conditions, dynamic values)
 - External callouts in the style of `ext_authz` (HTTP/gRPC)
 - Sandboxed WASM plugins
-- Public developer portal (API discovery, self-service subscriptions, approval workflow)
-- OpenAPI document exposed per product
+- Email notifications for developer portal events (see 16.0 (d))
 - Event Hubs / Kafka usage sink (12.4)
 - Per-plan limits (a plan is currently only a label)
 - Usage-based monetization / billing
@@ -356,3 +387,4 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 - 2026-11-06 — 15.4 `[~]`: `.github/workflows/release.yml` written (tag `v*` → verify → packages/images/chart → NuGet (Trusted Publishing via `NuGet/login`, or `NUGET_API_KEY`; environment `nuget`; skipped outside the `pgourlain` owner) → GitHub Release with body from `scripts/extract-changelog.sh`). Multi-arch images via `-p:ContainerRuntimeIdentifiers`, provenance via `actions/attest-build-provenance`, CycloneDX SBOM per image via `anchore/sbom-action`, chart pushed to `oci://ghcr.io/<owner>/charts`. Also added `templates/Gatewright.Templates` (the template package announced in 9.6) and the `org.opencontainers.image.revision` label. Verified locally: YAML parses, `dotnet pack` of all packages and of the template with `MinVerVersionOverride=0.0.1-rc.1`, changelog extraction/preparation scripts on fixtures. **Not verified**: the workflow itself has never run — the AC (`v0.0.1-rc.1` published end to end on a test repository) needs a GitHub test repository and NuGet/GHCR settings, which is outward-facing and left to the maintainer; rehearsal steps in `docs/release.md`.
 - 2026-11-06 — 15.5 done: `docs/release.md` plus `scripts/prepare-release.sh` (turns `[Unreleased]` into `[x.y.z] - date`, fresh `[Unreleased]`, comparison links, drops empty subsections; refuses an empty or already-released version) and `scripts/extract-changelog.sh`. Prereleases leave the changelog untouched and use `[Unreleased]` as the release body. Both scripts tested on fixtures and on a copy of the real changelog.
 - 2026-11-06 — 15.6 not started on purpose: tagging `v1.0.0`, publishing to NuGet/GHCR and announcing are irreversible, outward-facing actions and depend on the 15.4 rehearsal. Remaining steps for the maintainer: run the rehearsal, then `./scripts/prepare-release.sh 1.0.0` and follow `docs/release.md`.
+- 2026-11-06 — Phase 16 (developer portal) written at the user's request, promoted from the Backlog items "Public developer portal" and "OpenAPI document exposed per product". Planned only: 16.0 holds the four decisions (external identity provider, separate internet-facing app, approval mode, notifications) that need maintainer validation and an ADR before any code. Facts that shaped the plan: the imported OpenAPI source document is not stored today (16.4 must add it); consumers/subscriptions/keys already exist and are reused; email notifications moved to the Backlog.
