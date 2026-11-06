@@ -207,6 +207,9 @@ jobs:
     permissions:
       contents: read
       id-token: write
+    env:
+      # nuget.org profile name for Trusted Publishing: a repository secret or variable named NUGET_USER.
+      NUGET_USER: ${{ secrets.NUGET_USER || vars.NUGET_USER }}
     steps:
       - uses: actions/setup-dotnet@v6
         with:
@@ -217,16 +220,16 @@ jobs:
           path: packages
       - name: Trusted Publishing login (short-lived API key)
         id: login
-        if: vars.NUGET_USER != ''
+        if: env.NUGET_USER != ''
         uses: NuGet/login@v1
         with:
-          user: ${{ vars.NUGET_USER }}
+          user: ${{ env.NUGET_USER }}
       - name: Push packages
         env:
           NUGET_KEY: ${{ steps.login.outputs.NUGET_API_KEY || secrets.NUGET_API_KEY }}
         run: |
           if [[ -z "$NUGET_KEY" ]]; then
-            echo "Neither Trusted Publishing (vars.NUGET_USER) nor secrets.NUGET_API_KEY is configured." >&2
+            echo "Neither Trusted Publishing (NUGET_USER secret or variable) nor secrets.NUGET_API_KEY is configured." >&2
             exit 1
           fi
           dotnet nuget push "packages/*.nupkg" --api-key "$NUGET_KEY" --source https://api.nuget.org/v3/index.json --skip-duplicate

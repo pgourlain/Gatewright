@@ -7,7 +7,7 @@ Releases are cut by a maintainer and built by `.github/workflows/release.yml` wh
 | What | Where | Notes |
 |---|---|---|
 | NuGet Trusted Publishing policy | nuget.org → *Trusted Publishing* | Repository owner/name, workflow file `release.yml`, environment `nuget` |
-| Repository variable `NUGET_USER` | GitHub → Settings → Variables | The nuget.org profile name used by `NuGet/login`. Alternative: secret `NUGET_API_KEY` (scoped to `Gatewright.*`, push-only) |
+| `NUGET_USER` (repository secret or variable) | GitHub → Settings → Secrets and variables → Actions | The nuget.org profile name used by `NuGet/login`. Alternative: secret `NUGET_API_KEY` (scoped to `Gatewright.*`, push-only) |
 | Environment `nuget` | GitHub → Settings → Environments | Add required reviewers so a tag alone cannot publish to NuGet.org |
 | GHCR packages public | GitHub → Packages | `gatewright-host`, `gatewright-portal`, `charts/gatewright` |
 | Signing key | local git config | `git config user.signingkey …` and `tag.gpgSign true` (GPG, SSH or gitsign) |
