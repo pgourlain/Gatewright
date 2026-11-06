@@ -19,7 +19,7 @@ jobs:
       - run: dotnet tool install --global nuget-license
       - name: Generate THIRD-PARTY-NOTICES.md
         run: ./scripts/generate-third-party-notices.sh
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: third-party-notices
           path: THIRD-PARTY-NOTICES.md
