@@ -4,7 +4,7 @@
 #
 # Phase 14.2 targets, validated on a real (if undersized) Kubernetes cluster: scale-out,
 # scale-in and a rolling update of the data plane produce zero request errors, and a published
-# config change reaches every one of 20 data-plane pods within the 5 s target (D4/D5, 6.5's
+# config change reaches every one of 50 data-plane pods within the 5 s target (D4/D5, 6.5's
 # config_version_applied convergence). Requires kind, kubectl, helm, dotnet and Docker.
 #
 #   kind create cluster --name gatewright && ./scripts/k8s-scale-test.sh
@@ -12,7 +12,7 @@
 # Resource requests/limits are deliberately tiny (--set below): this validates *behavior*
 # (no dropped requests, convergence time) on a small dev cluster, not per-pod throughput
 # (that is tests/load's job, at 14.2's 5,000 RPS / 2 vCPU target). Needs ~1 vCPU / ~1 GiB free
-# for 20 data-plane pods at these overrides; lower DP_REPLICAS on a smaller machine.
+# for 50 data-plane pods at these overrides; lower DP_REPLICAS on a smaller machine.
 # KEEP_NAMESPACE=1 skips the final cleanup, to inspect a failed run.
 set -euo pipefail
 
@@ -23,7 +23,7 @@ context="kind-$cluster"
 namespace="gatewright-perf"
 release="gatewright-perf"
 image_tag="perf-$(date +%s)"
-dp_replicas="${DP_REPLICAS:-20}"
+dp_replicas="${DP_REPLICAS:-50}"
 diagnostics_token="perf-diagnostics"
 admin_port=18180
 dp_port=18280
