@@ -13,12 +13,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-dotnet@v4
+      - uses: actions/setup-dotnet@v6
         with:
           dotnet-version: 10.0.x
       - uses: helm/kind-action@v1
         with:
           install_only: true
-      - uses: azure/setup-helm@v4
+      - uses: azure/setup-helm@v5
       - name: Run the Helm chart end-to-end test
         run: ./scripts/k8s-e2e.sh
