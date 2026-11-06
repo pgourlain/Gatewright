@@ -65,6 +65,7 @@ dotnet test Gatewright.slnx
 
 - Deploy on a Kubernetes cluster, copy-paste, every mode and database: [docs/user/quickstart-cluster.md](docs/user/quickstart-cluster.md)
 - Architecture and pods to deploy per mode: [docs/user/architecture.md](docs/user/architecture.md)
+- All user documentation: [docs/user/README.md](docs/user/README.md); release procedure: [docs/release.md](docs/release.md)
 - Architecture decisions: [docs/adr](docs/adr)
 - Contributing: [CONTRIBUTING.md](CONTRIBUTING.md)
 - Changelog: [CHANGELOG.md](CHANGELOG.md)
