@@ -42,7 +42,13 @@ public sealed class ReadinessGate : IHostedService
     /// <inheritdoc/>
     public async Task StopAsync(CancellationToken cancellationToken)
     {
-        BeginDrain();
+        if (Interlocked.Exchange(ref _draining, 1) == 1)
+        {
+            // Already draining: the Kubernetes preStop hook (GET /gw/lifecycle/prestop) ran this same
+            // delay before SIGTERM was even sent, so running it again here would just double it.
+            return;
+        }
+
         if (_delay > TimeSpan.Zero)
         {
             try
