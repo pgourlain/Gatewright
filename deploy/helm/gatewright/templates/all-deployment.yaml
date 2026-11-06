@@ -27,6 +27,7 @@ spec:
       {{- end }}
     spec:
       serviceAccountName: {{ include "gatewright.serviceAccountName" . }}
+      terminationGracePeriodSeconds: {{ .Values.all.terminationGracePeriodSeconds }}
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
         {{- toYaml . | nindent 8 }}
@@ -65,6 +66,11 @@ spec:
             - name: data
               mountPath: /data
             {{- end }}
+          lifecycle:
+            preStop:
+              httpGet:
+                path: /gw/lifecycle/prestop
+                port: http
           livenessProbe:
             httpGet:
               path: /healthz
