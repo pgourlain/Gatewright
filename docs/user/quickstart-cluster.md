@@ -20,13 +20,30 @@ kind create cluster --name gatewright
 kubectl config use-context kind-gatewright
 ```
 
-## 1. Get the images and the chart
+## 1. Get the chart and the image
 
-Until the first release publishes the images to a registry, build them from this repository (needs the .NET 10 SDK and Docker):
+The chart is in this repository:
 
 ```bash
 git clone https://github.com/pgourlain/Gatewright.git
 cd Gatewright
+```
+
+Then choose **one** way to get the image.
+
+### Option A: use the published image (nothing to build)
+
+```bash
+export IMAGE_ARGS="--set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=edge"
+```
+
+`edge` follows the latest build of `main`. To pin a version, use a commit tag (`ghcr.io/pgourlain/gatewright-host:<short-sha>`). The web portal image is `ghcr.io/pgourlain/gatewright-portal`.
+
+### Option B: build the image yourself
+
+Needs the .NET 10 SDK and Docker:
+
+```bash
 dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=quickstart -p:MinVerSkip=true
 ```
 
@@ -227,13 +244,20 @@ Details in [getting-started](getting-started.md#shared-state-with-redis).
 
 ## 7. Optional: web portal
 
+With the published image (Option A):
+
 ```bash
 helm upgrade gatewright deploy/helm/gatewright --namespace gatewright --reuse-values \
   --set portal.enabled=true \
-  --set portal.image.repository=gatewright-portal --set portal.image.tag=quickstart
+  --set portal.image.repository=ghcr.io/pgourlain/gatewright-portal --set portal.image.tag=edge
 ```
 
-Build the portal image first with `dotnet publish src/Gatewright.Portal -c Release -t:PublishContainer -p:ContainerImageTag=quickstart -p:MinVerSkip=true` (and `kind load docker-image gatewright-portal:quickstart --name gatewright` on kind).
+With your own build (Option B), build and load the portal image first, then upgrade with `portal.image.repository=gatewright-portal` and `portal.image.tag=quickstart`:
+
+```bash
+dotnet publish src/Gatewright.Portal -c Release -t:PublishContainer -p:ContainerImageTag=quickstart -p:MinVerSkip=true
+kind load docker-image gatewright-portal:quickstart --name gatewright   # kind only
+```
 
 ## Going to production
 
@@ -245,7 +269,7 @@ Before exposing Gatewright outside the cluster:
 2. **Expose the data plane.** Remove `--set dataPlane.service.type=ClusterIP` (or `all.service.type=ClusterIP`) to get the default `LoadBalancer`, or put your own Ingress/Front Door in front, setting `gateway.extraEnv.Gateway__ForwardedHeaders__TrustedProxies__0` to its address.
 3. **Keep the Admin API private.** In `separate` mode keep `controlPlane.service.type=ClusterIP`. In `all` mode the Admin API shares the proxy port: prefer `separate` for anything public.
 4. **Use an external PostgreSQL** (variants 1c / 2c), never the bundled one or SQLite, and keep the connection string in a secret store rather than shell history.
-5. **Use your own image tag** from your own registry (see step 1), pinned to a version, not `quickstart`.
+5. **Pin the image**: a commit tag from the published images, or your own tag from your own registry (step 1), never `edge` or `quickstart`.
 6. **Size the data plane**: `--set dataPlane.replicaCount=3`, or `--set dataPlane.autoscaling.enabled=true`. See the chart's [`values.yaml`](../../deploy/helm/gatewright/values.yaml) for every setting, and [observability](observability.md) to monitor it.
 
 ## Troubleshooting

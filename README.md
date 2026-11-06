@@ -16,14 +16,50 @@ designed to run in Kubernetes as the entry point of the cluster.
 
 ## Quick start
 
-Requirements: .NET 10 SDK.
+Deploy Gatewright on a Kubernetes cluster (try-out configuration, SQLite, one pod). The chart is in this repository:
+
+```bash
+git clone https://github.com/pgourlain/Gatewright.git
+cd Gatewright
+kubectl create namespace gatewright
+```
+
+### Option A: use the published image (nothing to build)
+
+```bash
+helm install gatewright deploy/helm/gatewright --namespace gatewright \
+  --set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=edge \
+  --set gateway.mode=all \
+  --set controlPlane.auth.developmentBypass=true \
+  --set all.service.type=ClusterIP
+```
+
+`edge` follows the latest build of `main`; use a commit tag (`ghcr.io/pgourlain/gatewright-host:<short-sha>`) to pin it.
+
+### Option B: build the image yourself
+
+Requires the .NET 10 SDK and Docker. Example on [kind](https://kind.sigs.k8s.io/):
+
+```bash
+dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=local -p:MinVerSkip=true
+kind load docker-image gatewright-host:local --name gatewright
+helm install gatewright deploy/helm/gatewright --namespace gatewright \
+  --set image.repository=gatewright-host --set image.tag=local --set image.pullPolicy=Never \
+  --set gateway.mode=all \
+  --set controlPlane.auth.developmentBypass=true \
+  --set all.service.type=ClusterIP
+```
+
+On another cluster, push the image to your own registry and set `image.repository`/`image.tag` accordingly.
+
+Then publish your first API and call it: see the [cluster quickstart](docs/user/quickstart-cluster.md), which also covers the `separate` mode and PostgreSQL.
+
+### Develop on Gatewright itself
 
 ```bash
 dotnet build Gatewright.slnx
 dotnet test Gatewright.slnx
 ```
-
-A runnable local setup (mode `all`, file configuration) arrives with phase 2 of the roadmap.
 
 ## Documentation
 
