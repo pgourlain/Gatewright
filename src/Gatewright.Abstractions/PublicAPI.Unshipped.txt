@@ -5,6 +5,7 @@ Gatewright.Abstractions.ApiInfo.BasePath.get -> string!
 Gatewright.Abstractions.ApiInfo.Name.get -> string!
 Gatewright.Abstractions.ApiInfo.Version.get -> string?
 Gatewright.Abstractions.BackendCall
+virtual Gatewright.Abstractions.BackendCall.Invoke(Gatewright.Abstractions.GatewayContext! context) -> System.Threading.Tasks.ValueTask<Gatewright.Abstractions.PolicyResult!>
 Gatewright.Abstractions.GatewayContext
 Gatewright.Abstractions.GatewayContext.Api.get -> Gatewright.Abstractions.ApiInfo!
 Gatewright.Abstractions.GatewayContext.CancellationToken.get -> System.Threading.CancellationToken
