@@ -2,6 +2,8 @@
 
 Gatewright runs in a single process in mode `All`, reading its configuration from a JSON file that is reloaded when it changes.
 
+On a cluster? See the [cluster quickstart](quickstart-cluster.md).
+
 See [samples/README.md](../../samples/README.md) for ready-to-run examples (Docker, Podman or Colima compose, or plain `dotnet run`).
 
 ## Modes

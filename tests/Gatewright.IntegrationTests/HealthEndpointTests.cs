@@ -129,6 +129,21 @@ public sealed class HealthEndpointTests : IDisposable
     }
 
     [Fact]
+    public async Task PreStop_Unauthenticated_MarksDrainingAndWaitsOutTheDelay()
+    {
+        // No shell in the chiseled image to run an exec preStop hook, so the chart points
+        // Kubernetes' preStop at this httpGet target instead (14.2); the kubelet calls it by pod IP
+        // with no credentials, so unlike /gw/config this one must work without a token.
+        await using var factory = Factory(ValidConfig(1), token: "s3cret");
+        using var client = factory.CreateClient();
+        await WaitForReadyAsync(client);
+
+        (await client.GetAsync("/gw/lifecycle/prestop")).StatusCode.ShouldBe(HttpStatusCode.OK);
+
+        (await client.GetAsync("/readyz")).StatusCode.ShouldBe(HttpStatusCode.ServiceUnavailable);
+    }
+
+    [Fact]
     public async Task PolicyCatalog_ListsBuiltInPoliciesWithSchemas()
     {
         await using var factory = Factory(ValidConfig(1), token: "s3cret");
