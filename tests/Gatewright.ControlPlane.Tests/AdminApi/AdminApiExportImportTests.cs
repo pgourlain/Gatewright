@@ -28,7 +28,7 @@ public sealed class AdminApiExportImportTests
                 Products = ["gold"],
             });
         await host.PutAsync("/admin/v1/apis/orders/operations/getOrder", new OperationRequest { Method = "GET", Path = "/{id}" });
-        await host.PutAsync("/admin/v1/policies/default-limit", new PolicyReference { Type = "rateLimit", Config = JsonDocument.Parse("""{"limit":10}""").RootElement });
+        await host.PutAsync("/admin/v1/policies/default-limit", new PolicyReference { Type = "rateLimit", Config = JsonElement.Parse("""{"limit":10}""") });
         await host.PutAsync("/admin/v1/scope-policies", new ScopePoliciesDto { Global = new PolicySet { Inbound = [new PolicyReference { Ref = "default-limit" }] } });
         await host.PostAsync("/admin/v1/subscriptions", new SubscriptionRequest { Name = "acme-gold", Consumer = "acme", Product = "gold", Plan = "premium" });
         await host.Client.PostAsync("/admin/v1/subscriptions/acme-gold/keys/primary", null);
@@ -181,7 +181,7 @@ public sealed class AdminApiExportImportTests
             await PopulateAsync(source);
             await source.PostAsync("/admin/v1/environments/staging/publications", new PublishRequest());
             document = await ExportAsync(source, "?environment=staging");
-            sourceVersion = JsonDocument.Parse(document).RootElement.GetProperty("config").GetProperty("version").GetInt64();
+            sourceVersion = JsonElement.Parse(document).GetProperty("config").GetProperty("version").GetInt64();
         }
 
         sourceVersion.ShouldBe(1);

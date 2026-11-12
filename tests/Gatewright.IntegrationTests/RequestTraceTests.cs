@@ -43,7 +43,7 @@ public sealed class RequestTraceTests
         var response = await CallAsync(gateway, "trace-token");
 
         var raw = response.Headers.GetValues("x-gatewright-trace-result").Single();
-        var entries = JsonDocument.Parse(Convert.FromBase64String(raw)).RootElement.EnumerateArray().ToList();
+        var entries = JsonElement.Parse(Convert.FromBase64String(raw)).EnumerateArray().ToList();
         entries.Select(e => $"{e.GetProperty("phase").GetString()}:{e.GetProperty("policy").GetString()}:{e.GetProperty("result").GetString()}")
             .ShouldBe(["Inbound:headers:Continue", "Inbound:rateLimit:Continue", "Outbound:headers:Continue"]);
         entries[0].GetProperty("durationMs").GetDouble().ShouldBeGreaterThanOrEqualTo(0);
@@ -71,6 +71,6 @@ public sealed class RequestTraceTests
 
         ((int)response.StatusCode).ShouldBe(429);
         var raw = response.Headers.GetValues("x-gatewright-trace-result").Single();
-        JsonDocument.Parse(Convert.FromBase64String(raw)).RootElement.EnumerateArray().Last().GetProperty("result").GetString().ShouldBe("Reject");
+        JsonElement.Parse(Convert.FromBase64String(raw)).EnumerateArray().Last().GetProperty("result").GetString().ShouldBe("Reject");
     }
 }

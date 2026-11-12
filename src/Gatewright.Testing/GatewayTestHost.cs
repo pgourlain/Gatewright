@@ -101,7 +101,7 @@ public sealed class GatewayTestHost : IAsyncDisposable
     public static PolicyReference Policy(string type, string? configJson = null) => new()
     {
         Type = type,
-        Config = configJson is null ? null : System.Text.Json.JsonDocument.Parse(configJson).RootElement.Clone(),
+        Config = configJson is null ? null : System.Text.Json.JsonElement.Parse(configJson),
     };
 
     /// <summary>Replaces the configuration and waits until the gateway applied it.</summary>

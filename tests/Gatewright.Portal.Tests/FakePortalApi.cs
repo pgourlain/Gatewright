@@ -17,8 +17,8 @@ internal sealed class FakePortalApi : IPortalApi
 
     public List<PolicyTypeInfo> Types { get; } =
     [
-        new("rateLimit", ["Inbound"], JsonDocument.Parse("""{"type":"object","required":["limit"],"properties":{"limit":{"type":"integer","description":"Requests per period"},"partitionBy":{"enum":["subscription","ip","global"]},"shared":{"type":"boolean"}}}""").RootElement),
-        new("timeout", ["Backend"], JsonDocument.Parse("""{"type":"object","properties":{"seconds":{"type":"number"}}}""").RootElement),
+        new("rateLimit", ["Inbound"], JsonElement.Parse("""{"type":"object","required":["limit"],"properties":{"limit":{"type":"integer","description":"Requests per period"},"partitionBy":{"enum":["subscription","ip","global"]},"shared":{"type":"boolean"}}}""")),
+        new("timeout", ["Backend"], JsonElement.Parse("""{"type":"object","properties":{"seconds":{"type":"number"}}}""")),
     ];
 
     public List<DiscoveredServiceResponse> Services { get; } = [];

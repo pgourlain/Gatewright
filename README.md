@@ -38,7 +38,7 @@ helm install gatewright deploy/helm/gatewright --namespace gatewright \
 
 ### Option B: build the image yourself
 
-Requires the .NET 10 SDK and Docker. Example on [kind](https://kind.sigs.k8s.io/):
+Requires the .NET 11 SDK and Docker. Example on [kind](https://kind.sigs.k8s.io/):
 
 ```bash
 dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=local -p:MinVerSkip=true

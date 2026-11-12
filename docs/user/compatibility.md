@@ -19,6 +19,17 @@ Gatewright and all its NuGet packages share one version, computed from the git t
 
 Not covered: internal projects (`Gatewright.Core`, `.DataPlane`, `.ControlPlane`, `.Distribution`, …) are packaged for the host and have no compatibility promise; build against `Gatewright.Sdk` and `Gatewright.Abstractions` only.
 
+## Supported .NET versions
+
+| Artifact | Target frameworks |
+|---|---|
+| NuGet libraries (`Gatewright.Abstractions`, `.Sdk`, `.Exposure`, `.Testing` and the packages they depend on) | `net10.0` (LTS) and `net11.0` |
+| Official images `gatewright-host`, `gatewright-portal` | .NET 11, chiseled Ubuntu 26.04 base (`resolute-chiseled-extra`) |
+| `gatewright` CLI (.NET tool) | `net11.0` |
+| `dotnet new gatewright-host` template | generates a `net11.0` host; change `TargetFramework` to `net10.0` (and the Dockerfile tags to `10.0`) to stay on .NET 10 LTS |
+
+Dropping a target framework from the libraries is a breaking change (major version).
+
 ## Control plane / data plane matrix
 
 A data plane can run **one release behind** the control plane (N-1). Upgrade the control plane first.

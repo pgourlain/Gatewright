@@ -22,7 +22,7 @@ internal static class PublishCommands
                 $"admin/v1/environments/{Uri.EscapeDataString(parse.GetValue(env)!)}/publications",
                 body,
                 cancellationToken: ct).ConfigureAwait(false);
-            var publication = JsonDocument.Parse(response).RootElement;
+            var publication = JsonElement.Parse(response);
             await environment.Out.WriteLineAsync(
                 $"Published revision {publication.GetProperty("revision").GetInt64()} to {parse.GetValue(env)} as configuration version {publication.GetProperty("number").GetInt64()}.").ConfigureAwait(false);
             return 0;
@@ -43,7 +43,7 @@ internal static class PublishCommands
                 $"admin/v1/environments/{Uri.EscapeDataString(parse.GetValue(env)!)}/rollback",
                 body,
                 cancellationToken: ct).ConfigureAwait(false);
-            var publication = JsonDocument.Parse(response).RootElement;
+            var publication = JsonElement.Parse(response);
             await environment.Out.WriteLineAsync(
                 $"Rolled {parse.GetValue(env)} back to revision {publication.GetProperty("revision").GetInt64()} (configuration version {publication.GetProperty("number").GetInt64()}).").ConfigureAwait(false);
             return 0;
@@ -59,7 +59,7 @@ internal static class PublishCommands
         {
             var query = parse.GetValue(env) is { } value ? "?environment=" + Uri.EscapeDataString(value) : "";
             var response = await CliApp.CreateClient(environment).SendAsync(HttpMethod.Get, "admin/v1/nodes" + query, cancellationToken: ct).ConfigureAwait(false);
-            var nodes = JsonDocument.Parse(response).RootElement;
+            var nodes = JsonElement.Parse(response);
             foreach (var node in nodes.EnumerateArray())
             {
                 var applied = node.GetProperty("appliedVersion").GetInt64();

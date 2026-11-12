@@ -13,5 +13,6 @@
 - [0011](0011-tls-termination-flexibility.md) — D11 — TLS may be terminated upstream or by Gatewright
 - [0012](0012-mit-license.md) — Choice of the MIT license
 - [0013](0013-native-aot-not-pursued.md) — Native AOT not pursued for V1
+- [0015](0015-dotnet-11.md) — Move to .NET 11, keep .NET 10 LTS for the published libraries
 
 A decision that contradicts an accepted ADR requires a new ADR superseding it.

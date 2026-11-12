@@ -2,7 +2,6 @@
 // SPDX-License-Identifier: MIT
 
 using System.Net.Http.Headers;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Text.Json;
 using Gatewright.Abstractions;
@@ -31,7 +30,7 @@ internal sealed class AcceptAnythingPolicy(string type) : IGatewayPolicy
 
     public PolicyPhase Phases => PolicyPhase.Inbound | PolicyPhase.Backend | PolicyPhase.Outbound;
 
-    public JsonElement ConfigSchema { get; } = JsonDocument.Parse("{}").RootElement;
+    public JsonElement ConfigSchema { get; } = JsonElement.Parse("{}");
 
     public IPolicyInstance Compile(JsonElement config, PolicyCompilationContext context) => new NoOp();
 
@@ -151,7 +150,7 @@ internal sealed class AdminApiHost : IAsyncDisposable
     public Task<HttpResponseMessage> PutAsync<T>(string url, T body) => Client.PutAsJsonAsync(url, body, Json);
 
     public static async Task<JsonElement> ReadAsync(HttpResponseMessage response) =>
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.Clone();
+        JsonElement.Parse(await response.Content.ReadAsStringAsync());
 
     public async ValueTask DisposeAsync()
     {

@@ -24,7 +24,7 @@ public abstract class PolicyBase<TConfig> : IGatewayPolicy
     {
         Type = type;
         Phases = phases;
-        _schema = new Lazy<JsonElement>(() => JsonDocument.Parse(schemaJson).RootElement.Clone());
+        _schema = new Lazy<JsonElement>(() => JsonElement.Parse(schemaJson));
     }
 
     /// <inheritdoc/>

@@ -4,7 +4,7 @@
     <NoWarn>$(NoWarn);CS1591;CA1812</NoWarn>
     <!-- `dotnet publish -t:PublishContainer`: non-root, chiseled (minimal attack surface; "-extra" variant resolved automatically for globalization/SQLite). -->
     <ContainerRepository>gatewright-portal</ContainerRepository>
-    <ContainerFamily>noble-chiseled</ContainerFamily>
+    <ContainerFamily>resolute-chiseled</ContainerFamily>
     <!-- Restore must know the RIDs of the multi-arch image built by the release pipeline (ContainerRuntimeIdentifiers). -->
     <RuntimeIdentifiers>linux-x64;linux-arm64</RuntimeIdentifiers>
   </PropertyGroup>

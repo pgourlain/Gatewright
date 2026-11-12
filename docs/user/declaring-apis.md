@@ -14,7 +14,7 @@ Open the portal (see the [cluster quickstart](quickstart-cluster.md#7-optional-w
 
 ## 2. OpenAPI import
 
-Any OpenAPI 3.0/3.1 document (JSON or YAML) can be imported. Gateway intent is carried by the optional [`x-gateway`](x-gateway.md) extension (rate limits, cache, auth, backend). Without it, the import creates plain routes you refine in the portal.
+Any OpenAPI 3.0/3.1/3.2 document (JSON or YAML) can be imported. Gateway intent is carried by the optional [`x-gateway`](x-gateway.md) extension (rate limits, cache, auth, backend). Without it, the import creates plain routes you refine in the portal.
 
 ```bash
 gatewright api import orders-openapi.yaml --service shop/orders:80 --product starter

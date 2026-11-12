@@ -9,7 +9,7 @@ namespace Gatewright.IntegrationTests;
 public sealed class HeadersPolicyTests
 {
     private static async Task<JsonElement> EchoAsync(HttpResponseMessage response) =>
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        JsonElement.Parse(await response.Content.ReadAsStringAsync());
 
     [Fact]
     public async Task Headers_RequestAndResponseOperations_AreAppliedEndToEnd()

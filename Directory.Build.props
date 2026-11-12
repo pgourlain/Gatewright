@@ -1,6 +1,10 @@
 <Project>
   <PropertyGroup>
-    <TargetFramework>net10.0</TargetFramework>
+    <!-- ADR 0015: applications, tests and samples run on .NET 11; the libraries published to NuGet
+         (every project under src/ except the Host, Portal and Cli applications) also target .NET 10 LTS. -->
+    <GatewrightMultiTarget Condition="$(MSBuildProjectDirectory.Replace('\', '/').Contains('/src/Gatewright.')) and '$(MSBuildProjectName)' != 'Gatewright.Host' and '$(MSBuildProjectName)' != 'Gatewright.Portal' and '$(MSBuildProjectName)' != 'Gatewright.Cli'">true</GatewrightMultiTarget>
+    <TargetFrameworks Condition="'$(GatewrightMultiTarget)' == 'true'">net10.0;net11.0</TargetFrameworks>
+    <TargetFramework Condition="'$(GatewrightMultiTarget)' != 'true'">net11.0</TargetFramework>
     <LangVersion>latest</LangVersion>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>

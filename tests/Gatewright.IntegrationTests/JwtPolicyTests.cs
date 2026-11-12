@@ -124,7 +124,7 @@ public sealed class JwtPolicyTests
         var response = await CallAsync(gateway, signer.Token());
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK, await response.Content.ReadAsStringAsync());
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement
+        JsonElement.Parse(await response.Content.ReadAsStringAsync())
             .GetProperty("headers").GetProperty("x-user").GetString().ShouldBe("user-1");
     }
 

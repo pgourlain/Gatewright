@@ -18,7 +18,7 @@ public sealed class PolicyCompilerTests
 
         public PolicyPhase Phases => phases;
 
-        public JsonElement ConfigSchema { get; } = JsonDocument.Parse(schema).RootElement;
+        public JsonElement ConfigSchema { get; } = JsonElement.Parse(schema);
 
         public IPolicyInstance Compile(JsonElement config, PolicyCompilationContext context)
         {
@@ -40,7 +40,7 @@ public sealed class PolicyCompilerTests
     private static PolicyReference Ref(string type, string? json = null) => new()
     {
         Type = type,
-        Config = json is null ? null : JsonDocument.Parse(json).RootElement,
+        Config = json is null ? null : JsonElement.Parse(json),
     };
 
     private static GatewayConfig ConfigWith(params PolicyReference[] inbound) => new()

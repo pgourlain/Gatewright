@@ -78,6 +78,20 @@ public sealed class OpenApiImporterTests
     }
 
     [Fact]
+    public void Import_OpenApi32Document_IsAccepted()
+    {
+        // ASP.NET Core 11 generates OpenAPI 3.2 by default.
+        var json = """
+            {"openapi":"3.2.0","info":{"title":"x","version":"1"},"x-gateway":{"backend":{"destinations":["http://b"]}},"paths":{"/items":{"get":{"operationId":"listItems"}}}}
+            """;
+
+        var result = OpenApiImporter.Import(json);
+
+        result.IsSuccess.ShouldBeTrue(string.Join("; ", result.Errors));
+        result.Api!.Operations.Select(o => $"{o.Method} {o.Path} {o.Name}").ShouldBe(["GET /items listItems"]);
+    }
+
+    [Fact]
     public void Import_CorsShortcut_AppliesToInboundAndOutbound()
     {
         var json = """

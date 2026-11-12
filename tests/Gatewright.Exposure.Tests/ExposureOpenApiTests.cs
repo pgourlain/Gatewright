@@ -62,7 +62,7 @@ public sealed class ExposureOpenApiTests
     [Fact]
     public async Task Document_DeclaresTheExtensionVersionAndDocumentLevelSettings()
     {
-        var root = JsonDocument.Parse(await GetDocumentAsync()).RootElement;
+        var root = JsonElement.Parse(await GetDocumentAsync());
 
         root.GetProperty("x-gateway-version").GetInt32().ShouldBe(1);
         var gateway = root.GetProperty("x-gateway");
@@ -75,7 +75,7 @@ public sealed class ExposureOpenApiTests
     [Fact]
     public async Task MinimalApiEndpoints_GetTheirPoliciesAsXGateway()
     {
-        var paths = JsonDocument.Parse(await GetDocumentAsync()).RootElement.GetProperty("paths");
+        var paths = JsonElement.Parse(await GetDocumentAsync()).GetProperty("paths");
 
         var get = paths.GetProperty("/orders").GetProperty("get").GetProperty("x-gateway");
         get.GetProperty("rateLimit").GetProperty("limit").GetInt32().ShouldBe(100);
@@ -90,7 +90,7 @@ public sealed class ExposureOpenApiTests
     [Fact]
     public async Task MvcAttributes_AreSupportedToo()
     {
-        var paths = JsonDocument.Parse(await GetDocumentAsync()).RootElement.GetProperty("paths");
+        var paths = JsonElement.Parse(await GetDocumentAsync()).GetProperty("paths");
 
         var get = paths.GetProperty("/api/legacy").GetProperty("get").GetProperty("x-gateway");
         get.GetProperty("rateLimit").GetProperty("limit").GetInt32().ShouldBe(25);

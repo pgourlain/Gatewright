@@ -83,6 +83,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
+- Gatewright now runs on .NET 11: the `gatewright-host` and `gatewright-portal` images use the .NET 11 chiseled base (Ubuntu 26.04), the `gatewright` CLI and the `dotnet new gatewright-host` template target `net11.0`. The NuGet libraries (`Gatewright.Abstractions`, `.Sdk`, `.Exposure`, `.Testing` and their dependencies) target both `net10.0` and `net11.0`, so distributions can stay on .NET 10 LTS (#15b)
+- The OpenAPI importer, CLI and portal accept OpenAPI 3.2 documents, the default of ASP.NET Core 11 (#15b)
 - The web portal now has a browser tab icon (SVG, with an `.ico` fallback) (#S.8)
 - New look for the web portal: top bar with tabs, cards, status pills, a policy-trace waterfall in the test console and consistent forms on every page (#S.8)
 - Idle database load of the control plane reduced from about 3 queries per second to 1 (a one-value query; the published snapshot is read only when it changes), and EF Core SQL commands are no longer logged by default (set `Logging:LogLevel:Microsoft.EntityFrameworkCore.Database.Command` to `Information` to see them); poll rate is `Gateway:ConfigPollInterval` (#S.6)

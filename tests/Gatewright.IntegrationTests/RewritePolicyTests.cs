@@ -15,7 +15,7 @@ public sealed class RewritePolicyTests
 
     private static async Task<(string Path, string Query)> EchoAsync(TestGateway gateway, string url)
     {
-        var json = JsonDocument.Parse(await gateway.Client.GetStringAsync(url)).RootElement;
+        var json = JsonElement.Parse(await gateway.Client.GetStringAsync(url));
         return (json.GetProperty("path").GetString()!, json.GetProperty("query").GetString() ?? "");
     }
 

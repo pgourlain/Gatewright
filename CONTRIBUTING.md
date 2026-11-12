@@ -4,7 +4,7 @@ Thanks for your interest! This document explains how to build, test and submit c
 
 ## Prerequisites
 
-- .NET 10 SDK
+- .NET 11 SDK (it also builds the `net10.0` target of the libraries)
 - Docker (integration tests use Testcontainers)
 - Optional: `kind` and `helm` for Kubernetes tests
 

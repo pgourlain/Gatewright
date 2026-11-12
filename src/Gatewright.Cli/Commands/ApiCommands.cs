@@ -17,7 +17,7 @@ internal static class ApiCommands
 
     private static Command CreateImport(CliEnvironment environment)
     {
-        var source = new Argument<string>("openapi") { Description = "OpenAPI 3.0/3.1 document: a file, an http(s) URL, or '-' for the standard input." };
+        var source = new Argument<string>("openapi") { Description = "OpenAPI 3.0/3.1/3.2 document: a file, an http(s) URL, or '-' for the standard input." };
         var name = new Option<string?>("--name") { Description = "API name (default: x-gateway.name or the document title)." };
         var basePath = new Option<string?>("--base-path") { Description = "Base path (default: x-gateway.basePath or the first server path)." };
         var service = new Option<string?>("--service") { Description = "Kubernetes service backend: namespace/name:port." };
@@ -78,7 +78,7 @@ internal static class ApiCommands
                 return 0;
             }
 
-            await PrintReportAsync(environment.Out, JsonDocument.Parse(response).RootElement).ConfigureAwait(false);
+            await PrintReportAsync(environment.Out, JsonElement.Parse(response)).ConfigureAwait(false);
             return 0;
         }));
         return command;

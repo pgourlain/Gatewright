@@ -2,7 +2,6 @@
    SPDX-License-Identifier: MIT *@
 @page "/subscriptions"
 @inject IPortalApi Api
-@inject AuthenticationStateProvider Auth
 
 <div class="page-head">
     <div class="grow">
@@ -82,6 +81,9 @@
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+
     private string? error;
     private bool canEdit;
     private KeyIssued? issued;
@@ -95,7 +97,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        canEdit = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanEdit;
+        canEdit = PortalUser.From((await AuthState).User).CanEdit;
         await LoadAsync();
     }
 

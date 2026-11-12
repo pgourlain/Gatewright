@@ -12,7 +12,7 @@ internal sealed class RejectPolicy : IGatewayPolicy
 
     public PolicyPhase Phases => PolicyPhase.Inbound;
 
-    public JsonElement ConfigSchema { get; } = JsonDocument.Parse("""{"type":"object","properties":{"status":{"type":"integer"}}}""").RootElement;
+    public JsonElement ConfigSchema { get; } = JsonElement.Parse("""{"type":"object","properties":{"status":{"type":"integer"}}}""");
 
     public IPolicyInstance Compile(JsonElement config, PolicyCompilationContext context)
     {
@@ -33,7 +33,7 @@ internal sealed class AddHeaderPolicy : IGatewayPolicy
 
     public PolicyPhase Phases => PolicyPhase.Outbound;
 
-    public JsonElement ConfigSchema { get; } = JsonDocument.Parse("""{"type":"object","required":["name","value"]}""").RootElement;
+    public JsonElement ConfigSchema { get; } = JsonElement.Parse("""{"type":"object","required":["name","value"]}""");
 
     public IPolicyInstance Compile(JsonElement config, PolicyCompilationContext context) =>
         new Instance(config.GetProperty("name").GetString()!, config.GetProperty("value").GetString()!);

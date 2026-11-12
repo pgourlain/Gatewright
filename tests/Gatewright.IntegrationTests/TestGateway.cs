@@ -186,7 +186,7 @@ internal sealed class TestGateway : IAsyncDisposable
     public static PolicyReference Policy(string type, string? json = null) => new()
     {
         Type = type,
-        Config = json is null ? null : JsonDocument.Parse(json).RootElement,
+        Config = json is null ? null : JsonElement.Parse(json),
     };
 
     public async ValueTask DisposeAsync()

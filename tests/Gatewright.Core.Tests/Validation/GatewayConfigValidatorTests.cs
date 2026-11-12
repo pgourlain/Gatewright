@@ -17,7 +17,7 @@ public sealed class GatewayConfigValidatorTests
 
         public PolicyPhase Phases => PolicyPhase.Inbound;
 
-        public JsonElement ConfigSchema { get; } = JsonDocument.Parse("{}").RootElement;
+        public JsonElement ConfigSchema { get; } = JsonElement.Parse("{}");
 
         public IPolicyInstance Compile(JsonElement config, PolicyCompilationContext context) => throw new NotSupportedException();
     }

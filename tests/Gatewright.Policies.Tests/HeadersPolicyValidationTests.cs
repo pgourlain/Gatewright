@@ -11,7 +11,7 @@ namespace Gatewright.Policies.Tests;
 public sealed class HeadersPolicyValidationTests
 {
     private static void Compile(string json) =>
-        new HeadersPolicy().Compile(JsonDocument.Parse(json).RootElement, new PolicyCompilationContext(new ServiceCollection().BuildServiceProvider(), "api:test"));
+        new HeadersPolicy().Compile(JsonElement.Parse(json), new PolicyCompilationContext(new ServiceCollection().BuildServiceProvider(), "api:test"));
 
     [Theory]
     [InlineData("""{"request":{"set":{"X-A\r\nX-B":"v"}}}""")]
