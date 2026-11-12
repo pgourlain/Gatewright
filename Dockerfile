@@ -6,7 +6,7 @@
 #
 # Works the same with `podman build` and `nerdctl build` (Colima).
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:11.0 AS build
 ARG PROJECT=src/Gatewright.Host
 WORKDIR /src
 COPY . .
