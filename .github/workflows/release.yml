@@ -159,7 +159,7 @@ jobs:
           docker buildx imagetools inspect "$ref" --format '{{json .Image}}' | grep -q 'org.opencontainers.image.licenses' \
             || docker buildx imagetools inspect "$ref" --raw | grep -q 'org.opencontainers.image.licenses'
       - name: Build provenance attestation (SLSA)
-        uses: actions/attest-build-provenance@v3
+        uses: actions/attest-build-provenance@v4
         with:
           subject-name: ${{ steps.push.outputs.ref }}
           subject-digest: ${{ steps.push.outputs.digest }}
