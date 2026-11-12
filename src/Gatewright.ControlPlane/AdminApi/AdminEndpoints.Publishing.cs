@@ -26,7 +26,7 @@ public static partial class AdminEndpoints
 
         group.MapGet("/revisions/{number:long}", async (long number, RevisionService revisions, CancellationToken ct) =>
             await revisions.GetAsync(number, ct) is { } revision
-                ? Results.Json(new { revision = ToResponse(revision), config = System.Text.Json.JsonDocument.Parse(revision.ConfigJson).RootElement })
+                ? Results.Json(new { revision = ToResponse(revision), config = System.Text.Json.JsonElement.Parse(revision.ConfigJson) })
                 : RequestValidation.NotFound("Revision", number.ToString(System.Globalization.CultureInfo.InvariantCulture)))
             .RequireAuthorization(AdminRoles.ReaderPolicy);
 

@@ -3,7 +3,6 @@
 
 using System.Diagnostics;
 using System.Net;
-using System.Net.Http.Json;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 using System.Text.Json;
@@ -176,7 +175,7 @@ public sealed class DistributionEndToEndTests : IAsyncLifetime
         (await WaitUntilAsync(
             async () =>
             {
-                var nodes = JsonDocument.Parse(await admin.GetStringAsync("/admin/v1/nodes?environment=dev")).RootElement;
+                var nodes = JsonElement.Parse(await admin.GetStringAsync("/admin/v1/nodes?environment=dev"));
                 return nodes.GetArrayLength() == 3 && nodes.EnumerateArray().All(n => n.GetProperty("inSync").GetBoolean() && n.GetProperty("appliedVersion").GetInt64() == 2);
             },
             TimeSpan.FromSeconds(5))).ShouldBeTrue();

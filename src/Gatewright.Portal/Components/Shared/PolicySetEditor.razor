@@ -127,7 +127,7 @@
             Type = e.Ref is null ? e.Type : null,
             Ref = e.Ref,
             Inheritance = e.Inheritance,
-            Config = e.Ref is null && e.Config.Count > 0 ? JsonDocument.Parse(e.Config.ToJsonString()).RootElement.Clone() : null,
+            Config = e.Ref is null && e.Config.Count > 0 ? JsonElement.Parse(e.Config.ToJsonString()) : null,
         };
 
         var set = new PolicySet

@@ -15,7 +15,7 @@ public sealed class PolicyChainResolverTests
         {
             Type = type,
             Inheritance = inheritance,
-            Config = json is null ? null : JsonDocument.Parse(json).RootElement,
+            Config = json is null ? null : JsonElement.Parse(json),
         };
 
     private static PolicySet Inbound(params PolicyReference[] policies) => new() { Inbound = policies };

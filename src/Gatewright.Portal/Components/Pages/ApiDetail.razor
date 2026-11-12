@@ -4,7 +4,6 @@
 @using Gatewright.Core.Policies
 @using Gatewright.Abstractions
 @inject IPortalApi Api
-@inject AuthenticationStateProvider Auth
 
 <div class="page-head"><div class="grow"><h2>API @Name</h2><p><a href="apis">All APIs</a></p></div></div>
 <ErrorBanner Message="@error" />
@@ -68,6 +67,9 @@ else
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+
     [Parameter] public string Name { get; set; } = "";
 
     private string? error;
@@ -85,7 +87,7 @@ else
     {
         try
         {
-            user = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User);
+            user = PortalUser.From((await AuthState).User);
             api = await Api.GetApiAsync(Name);
             draft = await Api.GetDraftAsync();
             types = await Api.GetPolicyTypesAsync();

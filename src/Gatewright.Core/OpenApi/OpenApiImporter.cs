@@ -10,7 +10,7 @@ using YamlDotNet.RepresentationModel;
 namespace Gatewright.Core.OpenApi;
 
 /// <summary>
-/// Reads an OpenAPI 3.0 or 3.1 document (JSON or YAML) and turns it into an <see cref="ApiDefinition"/>: operations from <c>paths</c>, and policies from
+/// Reads an OpenAPI 3.0, 3.1 or 3.2 document (JSON or YAML) and turns it into an <see cref="ApiDefinition"/>: operations from <c>paths</c>, and policies from
 /// the <c>x-gateway</c> extensions. Parsing only; nothing is stored.
 /// </summary>
 public static partial class OpenApiImporter
@@ -55,9 +55,9 @@ public static partial class OpenApiImporter
         }
 
         var version = root["openapi"]?.GetValue<string>() ?? "";
-        if (!version.StartsWith("3.0", StringComparison.Ordinal) && !version.StartsWith("3.1", StringComparison.Ordinal))
+        if (!version.StartsWith("3.0", StringComparison.Ordinal) && !version.StartsWith("3.1", StringComparison.Ordinal) && !version.StartsWith("3.2", StringComparison.Ordinal))
         {
-            return Failed($"Unsupported OpenAPI version '{version}'. Gatewright reads OpenAPI 3.0 and 3.1.");
+            return Failed($"Unsupported OpenAPI version '{version}'. Gatewright reads OpenAPI 3.0, 3.1 and 3.2.");
         }
 
         if (root[XGateway.VersionExtension] is { } declared && declared.GetValue<long>() > XGateway.CurrentVersion)
@@ -221,7 +221,7 @@ public static partial class OpenApiImporter
                     default:
                         if (Shortcuts.TryGetValue(key, out var shortcut))
                         {
-                            var reference = new PolicyReference { Type = shortcut.Type, Config = JsonDocument.Parse(value?.ToJsonString() ?? "{}").RootElement.Clone() };
+                            var reference = new PolicyReference { Type = shortcut.Type, Config = JsonElement.Parse(value?.ToJsonString() ?? "{}") };
                             foreach (var phase in shortcut.Phases)
                             {
                                 sets[phase].Add(reference);

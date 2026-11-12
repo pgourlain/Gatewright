@@ -47,7 +47,7 @@ LB ──► Data plane (YARP, N pods, HPA) ──► backend pods (direct LB th
 
 ## 3. Technical stack
 
-- **.NET 10 (LTS)**, latest C#, `Nullable` enabled, `TreatWarningsAsErrors` enabled.
+- **.NET 11** for applications, tests and samples; the NuGet libraries multi-target **`net10.0;net11.0`** so customers can stay on .NET 10 LTS (ADR 0015). Latest C#, `Nullable` enabled, `TreatWarningsAsErrors` enabled.
 - **YARP** (`Yarp.ReverseProxy`) for the proxy, `InMemoryConfigProvider` fed by the snapshots.
 - **ASP.NET Core**: Kestrel, JWT authentication (Microsoft.Identity.Web for Entra ID), OutputCache.
 - **gRPC** (`Grpc.AspNetCore`) for CP ↔ DP.

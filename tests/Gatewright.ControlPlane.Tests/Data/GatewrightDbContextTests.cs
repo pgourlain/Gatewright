@@ -52,7 +52,7 @@ public sealed class GatewrightDbContextTests
                 Backend = new BackendDefinition { Destinations = ["http://a"], Timeout = TimeSpan.FromSeconds(5) },
                 Policies = new PolicySet
                 {
-                    Inbound = [new PolicyReference { Type = "rateLimit", Config = JsonDocument.Parse("""{"limit":5}""").RootElement, Inheritance = PolicyInheritance.Override }],
+                    Inbound = [new PolicyReference { Type = "rateLimit", Config = JsonElement.Parse("""{"limit":5}"""), Inheritance = PolicyInheritance.Override }],
                 },
             };
             api.Operations.Add(new OperationEntity { Name = "get", Method = "GET", Path = "/{id}" });

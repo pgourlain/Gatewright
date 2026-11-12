@@ -27,7 +27,7 @@ public class GatewayPolicyAttribute : Attribute, IGatewayPolicyMetadataSource
 
     /// <inheritdoc/>
     public GatewayPolicyMetadata ToMetadata() =>
-        new(Type, ConfigurationJson is null ? null : System.Text.Json.JsonDocument.Parse(ConfigurationJson).RootElement.Clone(), Phase);
+        new(Type, ConfigurationJson is null ? null : System.Text.Json.JsonElement.Parse(ConfigurationJson), Phase);
 }
 
 /// <summary>Limits calls on the gateway: <c>[GatewayRateLimit(100, 60)]</c> = 100 requests per 60 seconds, per subscription.</summary>

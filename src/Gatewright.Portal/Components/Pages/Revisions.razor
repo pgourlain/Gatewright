@@ -3,7 +3,6 @@
 @page "/revisions"
 @using Gatewright.ControlPlane.Revisions
 @inject IPortalApi Api
-@inject AuthenticationStateProvider Auth
 
 <div class="page-head">
     <div class="grow">
@@ -94,6 +93,9 @@
 </section>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+
     private string? error;
     private string? message;
     private bool canPublish;
@@ -106,7 +108,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        canPublish = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanPublish;
+        canPublish = PortalUser.From((await AuthState).User).CanPublish;
         await LoadAsync();
     }
 

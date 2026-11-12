@@ -155,7 +155,7 @@ public sealed class AdminApiCrudTests
     public async Task SharedPoliciesAndScopePolicies_AreStoredAndReturned()
     {
         await using var host = await AdminApiHost.StartAsync();
-        var shared = new PolicyReference { Type = "rateLimit", Config = System.Text.Json.JsonDocument.Parse("""{"limit":10}""").RootElement };
+        var shared = new PolicyReference { Type = "rateLimit", Config = System.Text.Json.JsonElement.Parse("""{"limit":10}""") };
 
         (await host.PutAsync("/admin/v1/policies/default-limit", shared)).StatusCode.ShouldBe(HttpStatusCode.Created);
         (await host.PutAsync("/admin/v1/policies/default-limit", shared)).StatusCode.ShouldBe(HttpStatusCode.OK);

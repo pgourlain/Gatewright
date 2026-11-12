@@ -33,7 +33,7 @@ internal static class ConfigCommands
         {
             var query = parse.GetValue(env) is { } value ? "?environment=" + Uri.EscapeDataString(value) : "";
             var document = await CliApp.CreateClient(environment).SendAsync(HttpMethod.Get, "admin/v1/export" + query, cancellationToken: ct).ConfigureAwait(false);
-            var pretty = JsonSerializer.Serialize(JsonDocument.Parse(document).RootElement, Indented);
+            var pretty = JsonSerializer.Serialize(JsonElement.Parse(document), Indented);
             if (parse.GetValue(output) is { } path)
             {
                 await File.WriteAllTextAsync(path, pretty + Environment.NewLine, ct).ConfigureAwait(false);
@@ -62,7 +62,7 @@ internal static class ConfigCommands
                 "admin/v1/import" + (parse.GetValue(dryRun) ? "?dryRun=true" : ""),
                 document,
                 cancellationToken: ct).ConfigureAwait(false);
-            var result = JsonDocument.Parse(response).RootElement;
+            var result = JsonElement.Parse(response);
             await environment.Out.WriteLineAsync(
                 result.GetProperty("applied").GetBoolean()
                     ? $"Imported. Configuration hash {result.GetProperty("hash").GetString()}."

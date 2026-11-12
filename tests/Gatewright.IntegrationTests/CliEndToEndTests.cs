@@ -75,7 +75,7 @@ public sealed class CliEndToEndTests : IDisposable
 
         var exported = Path.Combine(_directory, "export.json");
         (await CliApp.RunAsync(["config", "export", "--env", "prod", "-o", exported], env)).ShouldBe(0, _error.ToString());
-        JsonDocument.Parse(File.ReadAllText(exported)).RootElement.GetProperty("config").GetProperty("apis")[0].GetProperty("name").GetString().ShouldBe("orders");
+        JsonElement.Parse(File.ReadAllText(exported)).GetProperty("config").GetProperty("apis")[0].GetProperty("name").GetString().ShouldBe("orders");
         (await CliApp.RunAsync(["config", "validate", exported], env)).ShouldBe(0, _error.ToString());
 
         await CliApp.RunAsync(["api", "import", spec, "--destination", "http://orders:9090"], env);

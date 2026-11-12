@@ -41,7 +41,7 @@ export IMAGE_ARGS="--set image.repository=ghcr.io/pgourlain/gatewright-host --se
 
 ### Option B: build the image yourself
 
-Needs the .NET 10 SDK and Docker:
+Needs the .NET 11 SDK and Docker:
 
 ```bash
 dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=quickstart -p:MinVerSkip=true

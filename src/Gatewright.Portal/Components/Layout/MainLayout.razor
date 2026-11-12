@@ -1,7 +1,6 @@
 @* Copyright (c) Gatewright contributors.
    SPDX-License-Identifier: MIT *@
 @inherits LayoutComponentBase
-@inject AuthenticationStateProvider Auth
 @inject TokenProvider Tokens
 @inject IHttpContextAccessor Http
 
@@ -32,6 +31,9 @@
 <main class="page">@Body</main>
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+
     private PortalUser? user;
 
     private static string Initials(string name)
@@ -42,7 +44,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        var state = await Auth.GetAuthenticationStateAsync();
+        var state = await AuthState;
         user = PortalUser.From(state.User);
         var context = Http.HttpContext;
         if (context is not null && Tokens.AccessToken is null)

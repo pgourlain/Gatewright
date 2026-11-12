@@ -32,7 +32,7 @@ public sealed class RedisSharedRateLimitTests(RedisFixture redis)
         services.AddSingleton(store);
         services.AddSingleton<RateLimiterRegistry>();
         using var provider = services.BuildServiceProvider();
-        return new RateLimitPolicy().Compile(JsonDocument.Parse(config).RootElement, new PolicyCompilationContext(provider, "api:test"));
+        return new RateLimitPolicy().Compile(JsonElement.Parse(config), new PolicyCompilationContext(provider, "api:test"));
     }
 
     private static GatewayContext Context() => new(new DefaultHttpContext(), "r", new ApiInfo("api", "/api"));

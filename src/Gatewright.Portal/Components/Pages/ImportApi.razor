@@ -2,12 +2,11 @@
    SPDX-License-Identifier: MIT *@
 @page "/import"
 @inject IPortalApi Api
-@inject AuthenticationStateProvider Auth
 
 <div class="page-head">
     <div class="grow">
         <h2>Import an API</h2>
-        <p>Paste or upload an OpenAPI 3.0/3.1 document (JSON or YAML). <code>x-gateway</code> extensions are honored.</p>
+        <p>Paste or upload an OpenAPI 3.0/3.1/3.2 document (JSON or YAML). <code>x-gateway</code> extensions are honored.</p>
     </div>
 </div>
 <ErrorBanner Message="@error" />
@@ -67,6 +66,9 @@
 }
 
 @code {
+    [CascadingParameter]
+    private Task<AuthenticationState> AuthState { get; set; } = default!;
+
     private string? error;
     private string document = "";
     private string service = "";
@@ -81,7 +83,7 @@
 
     protected override async Task OnInitializedAsync()
     {
-        canEdit = PortalUser.From((await Auth.GetAuthenticationStateAsync()).User).CanEdit;
+        canEdit = PortalUser.From((await AuthState).User).CanEdit;
         try
         {
             services = await Api.GetDiscoveredServicesAsync();

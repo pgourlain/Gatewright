@@ -92,7 +92,7 @@ public sealed class GatewayPolicyTests
     {
         var registry = new PolicyRegistry([new SamplePolicy()]);
 
-        var errors = registry.Validate("test.sample", JsonDocument.Parse(json).RootElement);
+        var errors = registry.Validate("test.sample", JsonElement.Parse(json));
 
         (errors.Count > 0 ? 1 : 0).ShouldBe(expectedErrors);
     }
@@ -102,7 +102,7 @@ public sealed class GatewayPolicyTests
     {
         var policy = new SamplePolicy();
 
-        policy.Compile(JsonDocument.Parse("""{"count":7,"label":"hello","mode":"lenient","tags":["a","b"]}""").RootElement, Context());
+        policy.Compile(JsonElement.Parse("""{"count":7,"label":"hello","mode":"lenient","tags":["a","b"]}"""), Context());
 
         policy.Compiled.ShouldNotBeNull();
         policy.Compiled.Count.ShouldBe(7);

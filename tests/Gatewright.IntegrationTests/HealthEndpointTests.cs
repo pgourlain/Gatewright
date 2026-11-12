@@ -111,7 +111,7 @@ public sealed class HealthEndpointTests : IDisposable
         var response = await client.GetAsync("/gw/config");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var json = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        var json = JsonElement.Parse(await response.Content.ReadAsStringAsync());
         json.GetProperty("version").GetInt64().ShouldBe(7);
         json.GetProperty("hash").GetString()!.Length.ShouldBe(64);
     }
@@ -154,7 +154,7 @@ public sealed class HealthEndpointTests : IDisposable
         var response = await client.GetAsync("/gw/policies");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var catalog = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        var catalog = JsonElement.Parse(await response.Content.ReadAsStringAsync());
         var types = catalog.EnumerateArray().Select(e => e.GetProperty("type").GetString()).ToArray();
         types.ShouldBe(
             ["apiKey", "cache", "circuitBreaker", "cors", "headers", "ipFilter", "jwt", "mockResponse", "quota", "rateLimit", "retry", "rewrite", "timeout"],

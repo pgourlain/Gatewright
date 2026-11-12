@@ -13,11 +13,11 @@ public sealed class GatewayConfigSerializerTests
         Version = 7,
         GlobalPolicies = new PolicySet
         {
-            Inbound = [new PolicyReference { Type = "headers", Config = JsonDocument.Parse("""{"set":{"x-a":"1"}}""").RootElement }],
+            Inbound = [new PolicyReference { Type = "headers", Config = JsonElement.Parse("""{"set":{"x-a":"1"}}""") }],
         },
         Policies = new Dictionary<string, PolicyReference>
         {
-            ["default-limit"] = new() { Type = "rateLimit", Config = JsonDocument.Parse("""{"limit":10}""").RootElement },
+            ["default-limit"] = new() { Type = "rateLimit", Config = JsonElement.Parse("""{"limit":10}""") },
         },
         Products = [new ProductDefinition { Name = "gold", RequiresSubscription = true }],
         Apis =

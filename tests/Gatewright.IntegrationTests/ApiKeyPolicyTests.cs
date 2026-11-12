@@ -53,7 +53,7 @@ public sealed class ApiKeyPolicyTests
         var response = await CallAsync(gateway, "gold-secondary");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        var headers = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("headers");
+        var headers = JsonElement.Parse(await response.Content.ReadAsStringAsync()).GetProperty("headers");
         headers.GetProperty("x-sub").GetString().ShouldBe("sub-gold");
         headers.GetProperty("x-plan").GetString().ShouldBe("premium");
         headers.TryGetProperty("x-api-key", out _).ShouldBeFalse();
@@ -94,7 +94,7 @@ public sealed class ApiKeyPolicyTests
         var response = await CallAsync(gateway, null, "/api/x?key=gold-primary&q=1");
 
         response.StatusCode.ShouldBe(HttpStatusCode.OK);
-        JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement.GetProperty("query").GetString().ShouldBe("?q=1");
+        JsonElement.Parse(await response.Content.ReadAsStringAsync()).GetProperty("query").GetString().ShouldBe("?q=1");
     }
 
     [Fact]

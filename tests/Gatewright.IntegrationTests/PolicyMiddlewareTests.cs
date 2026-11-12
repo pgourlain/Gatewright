@@ -55,7 +55,7 @@ public sealed class PolicyMiddlewareTests : IAsyncLifetime
 
         response.StatusCode.ShouldBe(HttpStatusCode.Forbidden);
         response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
-        var body = JsonDocument.Parse(await response.Content.ReadAsStringAsync()).RootElement;
+        var body = JsonElement.Parse(await response.Content.ReadAsStringAsync());
         body.GetProperty("type").GetString().ShouldBe("rejected");
         body.GetProperty("status").GetInt32().ShouldBe(403);
     }
@@ -87,7 +87,7 @@ public sealed class PolicyMiddlewareTests : IAsyncLifetime
                     Backend = new BackendDefinition { Destinations = [backendAddress] },
                     Policies = new PolicySet
                     {
-                        Outbound = [new PolicyReference { Type = "addHeader", Config = JsonDocument.Parse("""{"name":"x-gateway","value":"gatewright"}""").RootElement }],
+                        Outbound = [new PolicyReference { Type = "addHeader", Config = JsonElement.Parse("""{"name":"x-gateway","value":"gatewright"}""") }],
                     },
                     Operations =
                     [
@@ -97,7 +97,7 @@ public sealed class PolicyMiddlewareTests : IAsyncLifetime
                             Name = "secret",
                             Method = "GET",
                             Path = "/secret",
-                            Policies = new PolicySet { Inbound = [new PolicyReference { Type = "reject", Config = JsonDocument.Parse("""{"status":403}""").RootElement }] },
+                            Policies = new PolicySet { Inbound = [new PolicyReference { Type = "reject", Config = JsonElement.Parse("""{"status":403}""") }] },
                         },
                     ],
                 },
