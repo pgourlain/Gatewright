@@ -12,7 +12,7 @@ WORKDIR /src
 COPY . .
 RUN dotnet publish "$PROJECT" -c Release -o /app -p:UseAppHost=false -p:MinVerSkip=true
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:11.0 AS runtime
 ARG ASSEMBLY=Gatewright.Host
 LABEL org.opencontainers.image.licenses="MIT" \
       org.opencontainers.image.source="https://github.com/pgourlain/gatewright"
