@@ -32,7 +32,15 @@ helm repo update
 export CHART=gatewright/gatewright
 ```
 
-Prereleases (`-rc.N`) are hidden unless you add `--devel` to the `helm install` command. The OCI registry works too: `export CHART=oci://ghcr.io/pgourlain/charts/gatewright`.
+Prereleases (`-rc.N`) are hidden unless you add `--devel` to the `helm install` command. Pin a version with `--version <x.y.z>` (add it to `CHART`, see below).
+
+### Chart from the OCI registry (no `repo add`)
+
+```bash
+export CHART="oci://ghcr.io/pgourlain/charts/gatewright --version <x.y.z>"
+```
+
+OCI references always need a version. Other sources (release asset, Flux, Argo CD) are in the [chart README](../../deploy/helm/gatewright/README.md#install).
 
 ### Chart from a clone
 

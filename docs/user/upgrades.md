@@ -11,7 +11,9 @@ Gatewright follows [Semantic Versioning](https://semver.org/) (details in [compa
 With Helm:
 
 ```bash
-helm upgrade gatewright deploy/helm/gatewright --namespace gatewright --reuse-values --set image.tag=<new>
+helm repo update
+helm upgrade gatewright gatewright/gatewright --namespace gatewright --reuse-values --version <new>
+# or: helm upgrade gatewright oci://ghcr.io/pgourlain/charts/gatewright --version <new> ...   (from a clone: deploy/helm/gatewright)
 ```
 
 The chart rolls the control plane and the data plane as separate Deployments; with `gateway.mode=all` both move together.

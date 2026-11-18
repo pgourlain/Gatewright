@@ -2,9 +2,77 @@
 
 Deploys Gatewright (API Management + YARP reverse proxy) to Kubernetes.
 
+## Install
+
+Published charts need no clone. Pick one source; every command below installs the same chart.
+
+**Helm repository (GitHub Pages)**
+
 ```bash
-helm install my-gatewright deploy/helm/gatewright --set controlPlane.auth.authority=https://login.example/tenant
+helm repo add gatewright https://pgourlain.github.io/Gatewright
+helm repo update
+helm install gatewright gatewright/gatewright --namespace gatewright --create-namespace
 ```
+
+**OCI registry (GHCR)**, no `repo add` needed:
+
+```bash
+helm install gatewright oci://ghcr.io/pgourlain/charts/gatewright --version <x.y.z> --namespace gatewright --create-namespace
+```
+
+OCI installs require `--version`; the registry has no "latest" lookup. Find versions with `helm search repo gatewright --versions` (repository) or on the
+[GHCR package page](https://github.com/pgourlain?tab=packages&repo_name=Gatewright) (OCI).
+
+**Release asset**: every GitHub Release carries `gatewright-<version>.tgz`:
+
+```bash
+helm install gatewright https://github.com/pgourlain/Gatewright/releases/download/v<x.y.z>/gatewright-<x.y.z>.tgz --namespace gatewright --create-namespace
+```
+
+**From a clone** (development, unreleased changes):
+
+```bash
+helm install gatewright deploy/helm/gatewright --namespace gatewright --create-namespace
+```
+
+### Useful commands
+
+```bash
+helm search repo gatewright --versions                       # list versions (add --devel to include -rc.N)
+helm show values gatewright/gatewright --version <x.y.z>     # every setting; same with the oci:// reference
+helm install gatewright gatewright/gatewright --version <x.y.z> --devel ...   # a prerelease
+helm upgrade gatewright gatewright/gatewright --namespace gatewright --reuse-values --version <x.y.z>
+helm pull gatewright/gatewright --version <x.y.z> --untar    # download and unpack the chart to read or patch it
+helm template gatewright oci://ghcr.io/pgourlain/charts/gatewright --version <x.y.z> -f my-values.yaml   # render without installing
+```
+
+Pin `--version` in CI and GitOps: a chart version and its default image tag (`appVersion`) move together.
+
+### GitOps
+
+Flux (repository):
+
+```yaml
+apiVersion: source.toolkit.fluxcd.io/v1
+kind: HelmRepository
+metadata: { name: gatewright, namespace: flux-system }
+spec: { url: https://pgourlain.github.io/Gatewright, interval: 1h }
+---
+apiVersion: helm.toolkit.fluxcd.io/v2
+kind: HelmRelease
+metadata: { name: gatewright, namespace: gatewright }
+spec:
+  interval: 10m
+  chart:
+    spec: { chart: gatewright, version: "x.y.z", sourceRef: { kind: HelmRepository, name: gatewright, namespace: flux-system } }
+  values:
+    gateway: { mode: separate }
+```
+
+Flux (OCI): `HelmRepository` with `type: oci` and `url: oci://ghcr.io/pgourlain/charts`.
+
+Argo CD: an `Application` with `source.repoURL: https://pgourlain.github.io/Gatewright`, `chart: gatewright`, `targetRevision: x.y.z`; for OCI use
+`repoURL: ghcr.io/pgourlain/charts` (no scheme), `chart: gatewright`, with the repository registered as type `helm` and `enableOCI: true`.
 
 ## Modes (`gateway.mode`)
 
