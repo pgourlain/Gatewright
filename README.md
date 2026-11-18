@@ -34,13 +34,13 @@ clone the repository and use `export CHART=deploy/helm/gatewright; unset CHART_V
 
 ```bash
 helm install gatewright $CHART $CHART_VERSION --namespace gatewright \
-  --set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=edge \
+  --set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=1.0.0-rc.2 \
   --set gateway.mode=all \
   --set controlPlane.auth.developmentBypass=true \
   --set all.service.type=ClusterIP
 ```
 
-`edge` follows the latest build of `main`; use a commit tag (`ghcr.io/pgourlain/gatewright-host:<short-sha>`) to pin it.
+The image tag is a published release; `edge` and commit tags come from a manually triggered workflow and can be stale.
 
 ### Option B: build the image yourself
 

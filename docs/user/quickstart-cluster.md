@@ -58,10 +58,10 @@ Then choose **one** way to get the image.
 ### Option A: use the published image (nothing to build)
 
 ```bash
-export IMAGE_ARGS=--set=image.repository=ghcr.io/pgourlain/gatewright-host,image.tag=edge
+export IMAGE_ARGS=--set=image.repository=ghcr.io/pgourlain/gatewright-host,image.tag=1.0.0-rc.2
 ```
 
-`edge` follows the latest build of `main`. To pin a version, use a commit tag (`ghcr.io/pgourlain/gatewright-host:<short-sha>`). The web portal image is `ghcr.io/pgourlain/gatewright-portal`.
+The image tag is a published release (the same version as the chart). `edge` and commit tags (`<short-sha>`) come from a manually triggered workflow and can be stale: do not rely on them. The web portal image is `ghcr.io/pgourlain/gatewright-portal`.
 
 ### Option B: build the image yourself
 
@@ -273,8 +273,11 @@ With the published image (Option A):
 ```bash
 helm upgrade gatewright $CHART $CHART_VERSION --namespace gatewright --reuse-values \
   --set portal.enabled=true \
-  --set portal.image.repository=ghcr.io/pgourlain/gatewright-portal --set portal.image.tag=edge
+  --set portal.image.repository=ghcr.io/pgourlain/gatewright-portal --set portal.image.tag=1.0.0-rc.2 \
+  --set portal.auth.mode=Development
 ```
+
+`portal.auth.mode=Development` skips sign-in and makes every visitor an administrator: try-out only, like `controlPlane.auth.developmentBypass`. Without it the portal starts in OpenID Connect mode and refuses to start until `portal.auth.authority` and `portal.auth.clientId` are set. For a real installation, set those (and `portal.auth.clientSecret`) instead.
 
 With your own build (Option B), build and load the portal image first, then upgrade with `portal.image.repository=gatewright-portal` and `portal.image.tag=quickstart`:
 
