@@ -97,6 +97,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- Portal in Oidc mode without `Portal:Auth:Authority`/`ClientId` now fails at startup with an explicit message instead of answering 500 on every request, `/healthz` included; `Portal:Auth:Mode=Development` (no sign-in, for try-outs) no longer requires `ASPNETCORE_ENVIRONMENT=Development` and logs a warning, so `portal.auth.mode=Development` works from the Helm chart
 - `Gateway:ConfigPollInterval` outside 0 to 1 day (for example `30000`, which .NET reads as days) now fails at startup with a message explaining the `hh:mm:ss` format, instead of crashing the control plane with a timer error (#S.7)
 - Data plane pods could drop requests during a scale-down or a rolling update: without a `preStop` hook, Kubernetes sent `SIGTERM` the instant a pod was marked for deletion, before the Service's Endpoints update had reached every node, so some in-flight connections landed on a pod already gone from the Endpoints list. Fixed by the `preStop` hook above (#14.2)
 

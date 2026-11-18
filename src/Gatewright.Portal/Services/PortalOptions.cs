@@ -25,7 +25,7 @@ public sealed class PortalOptions
 /// <summary>Authentication settings of the portal.</summary>
 public sealed class PortalAuthOptions
 {
-    /// <summary>Gets or sets the mode: <c>Oidc</c> (default, Entra ID) or <c>Development</c> (no sign-in, an administrator; only honored in the Development environment).</summary>
+    /// <summary>Gets or sets the mode: <c>Oidc</c> (default, Entra ID) or <c>Development</c> (no sign-in, every visitor is an administrator; for non-production try-outs only).</summary>
     public string Mode { get; set; } = "Oidc";
 
     /// <summary>Gets or sets the OIDC authority, for example <c>https://login.microsoftonline.com/&lt;tenant&gt;/v2.0</c>.</summary>

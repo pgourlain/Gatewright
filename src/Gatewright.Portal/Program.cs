@@ -14,11 +14,6 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.Configure<PortalOptions>(builder.Configuration.GetSection(PortalOptions.SectionName));
 var portal = builder.Configuration.GetSection(PortalOptions.SectionName).Get<PortalOptions>() ?? new PortalOptions();
 var development = string.Equals(portal.Auth.Mode, "Development", StringComparison.OrdinalIgnoreCase);
-if (development && !builder.Environment.IsDevelopment())
-{
-    throw new InvalidOperationException("Portal:Auth:Mode=Development skips sign-in and is only allowed when ASPNETCORE_ENVIRONMENT is Development.");
-}
-
 builder.Services.AddRazorComponents().AddInteractiveServerComponents();
 builder.Services.AddCascadingAuthenticationState();
 builder.Services.AddScoped<TokenProvider>();
@@ -32,6 +27,11 @@ if (development)
 }
 else
 {
+    if (string.IsNullOrWhiteSpace(portal.Auth.Authority) || string.IsNullOrWhiteSpace(portal.Auth.ClientId))
+    {
+        throw new InvalidOperationException("Portal:Auth:Authority and Portal:Auth:ClientId are required in Oidc mode. Configure them, or set Portal:Auth:Mode=Development for a non-production try-out.");
+    }
+
     builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
         .AddCookie()
         .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
@@ -61,6 +61,11 @@ else
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+if (development)
+{
+    LoggerMessage.Define(LogLevel.Warning, new EventId(1, "DevelopmentAuth"), "Portal:Auth:Mode=Development: sign-in is disabled and every visitor is an administrator. Never use this in production.")(app.Logger, null);
+}
+
 app.UseStaticFiles();
 app.UseAuthentication();
 app.UseAuthorization();
