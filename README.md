@@ -22,18 +22,18 @@ Get the chart, **no clone needed**:
 
 ```bash
 helm repo add gatewright https://pgourlain.github.io/Gatewright && helm repo update
-export CHART=gatewright/gatewright
-# or, without adding a repository: export CHART="oci://ghcr.io/pgourlain/charts/gatewright --version <x.y.z>"
+export CHART=gatewright/gatewright CHART_VERSION=--version=1.0.0-rc.2
+# or, without adding a repository: export CHART=oci://ghcr.io/pgourlain/charts/gatewright CHART_VERSION=--version=1.0.0-rc.2
 kubectl create namespace gatewright
 ```
 
 Other sources (release asset, Flux, Argo CD) are listed in the [chart README](deploy/helm/gatewright/README.md#install). To build the image yourself or hack on the chart,
-clone the repository and use `export CHART=deploy/helm/gatewright`.
+clone the repository and use `export CHART=deploy/helm/gatewright; unset CHART_VERSION`.
 
 ### Option A: use the published image (nothing to build)
 
 ```bash
-helm install gatewright $CHART --namespace gatewright \
+helm install gatewright $CHART $CHART_VERSION --namespace gatewright \
   --set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=edge \
   --set gateway.mode=all \
   --set controlPlane.auth.developmentBypass=true \
@@ -49,7 +49,7 @@ Requires the .NET 11 SDK and Docker. Example on [kind](https://kind.sigs.k8s.io/
 ```bash
 dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=local -p:MinVerSkip=true
 kind load docker-image gatewright-host:local --name gatewright
-helm install gatewright $CHART --namespace gatewright \
+helm install gatewright $CHART $CHART_VERSION --namespace gatewright \
   --set image.repository=gatewright-host --set image.tag=local --set image.pullPolicy=Never \
   --set gateway.mode=all \
   --set controlPlane.auth.developmentBypass=true \
