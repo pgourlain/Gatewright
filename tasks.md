@@ -349,6 +349,7 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 - External callouts in the style of `ext_authz` (HTTP/gRPC)
 - Sandboxed WASM plugins
 - Email notifications for developer portal events (see 16.0 (d))
+- Local username/password authentication for the admin portal and Admin API, next to OIDC (proposal in `docs/adr/0016-local-password-authentication.md`, status Proposed; needs maintainer validation and a CLAUDE.md §6 amendment before any code)
 - Event Hubs / Kafka usage sink (12.4)
 - Per-plan limits (a plan is currently only a label)
 - Usage-based monetization / billing
