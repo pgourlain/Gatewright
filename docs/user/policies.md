@@ -25,6 +25,42 @@ Variables usable in header, query and similar values: `{subscription.id}`, `{sub
 
 Backend policies are ordered outermost first, for example `circuitBreaker`, `retry`, `timeout`.
 
+## Internal callers with Entra ID, external callers with an API key
+
+Policies of one API combine with AND, so one path cannot accept "a JWT or an API key". Declare two APIs on the same backend instead, each with its own base path and authentication:
+
+```json
+{
+  "products": [ { "name": "external", "requiresSubscription": true } ],
+  "apis": [
+    {
+      "name": "orders-internal",
+      "basePath": "/internal/orders",
+      "backend": { "destinations": ["http://orders:8080"] },
+      "policies": { "inbound": [
+        { "type": "jwt", "config": { "issuers": [ {
+            "issuer": "https://login.microsoftonline.com/<tenant>/v2.0",
+            "audiences": ["api://<app-id>"],
+            "metadataAddress": "https://login.microsoftonline.com/<tenant>/v2.0/.well-known/openid-configuration",
+            "requiredScopes": ["orders.read"] } ] } }
+      ] }
+    },
+    {
+      "name": "orders-external",
+      "basePath": "/orders",
+      "products": ["external"],
+      "backend": { "destinations": ["http://orders:8080"] },
+      "policies": { "inbound": [
+        { "type": "apiKey", "config": { "products": ["external"] } },
+        { "type": "rateLimit", "config": { "limit": 100, "periodSeconds": 60, "partitionBy": "subscription" } }
+      ] }
+    }
+  ]
+}
+```
+
+Checked on a local gateway: `/orders` answers 200 with a valid key and 401 without a key or with a bearer token only; `/internal/orders` answers 200 with a valid token and 401 with no token, with a key only or with a malformed token. To keep `/internal/*` off the Internet, expose the gateway publicly through a route that does not forward that prefix, or add an `ipFilter` policy.
+
 ## Operational endpoints
 
 All require `Authorization: Bearer <Gateway:DiagnosticsToken>` and are disabled when the token is empty:
