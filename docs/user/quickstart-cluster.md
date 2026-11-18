@@ -286,6 +286,52 @@ dotnet publish src/Gatewright.Portal -c Release -t:PublishContainer -p:Container
 kind load docker-image gatewright-portal:quickstart --name gatewright   # kind only
 ```
 
+## 8. Optional: one values file for the whole installation
+
+Repeating `--set` flags is error-prone, and an `upgrade` without `--reuse-values` silently resets every option you do not pass again. Keep the installation in a file instead. This one installs the `all` mode, the published images and the web portal (try-out settings):
+
+```yaml
+# gatewright-values.yaml
+image: { repository: ghcr.io/pgourlain/gatewright-host, tag: 1.0.0-rc.2 }
+gateway: { mode: all }
+controlPlane: { auth: { developmentBypass: true } }   # try-out only: every caller is an administrator
+all: { service: { type: ClusterIP } }
+portal:
+  enabled: true
+  image: { repository: ghcr.io/pgourlain/gatewright-portal, tag: 1.0.0-rc.2 }
+  auth: { mode: Development }                           # try-out only: no sign-in
+```
+
+```bash
+helm upgrade --install gatewright $CHART $CHART_VERSION --namespace gatewright --create-namespace -f gatewright-values.yaml
+```
+
+`upgrade --install` installs on the first run and upgrades afterwards. Change the file and run the same command again.
+
+## 9. Optional: reach it without `kubectl port-forward`
+
+Each entry point is a Kubernetes `Service` whose type you choose:
+
+| What | Values | Default |
+|---|---|---|
+| Gateway, mode `all` (proxy and Admin API on one port) | `all.service.type`, `all.service.httpPort` | `LoadBalancer`, 8080 |
+| Data plane, mode `separate` | `dataPlane.service.type`, `dataPlane.service.httpPort` | `LoadBalancer`, 8080 |
+| Web portal | `portal.service.type`, `portal.service.port` | `ClusterIP`, 8080 |
+
+Set `portal.service.type=LoadBalancer` and give it a port different from the gateway's (for example `portal.service.port=8088`), or two LoadBalancers collide on the same port.
+
+```bash
+kubectl --namespace gatewright get svc          # the EXTERNAL-IP column is the address to use
+```
+
+> **A public address exposes whatever it fronts.** With `controlPlane.auth.developmentBypass=true` the Admin API sits on the gateway port in `all` mode, so a public `all` service gives every visitor administrator rights, and `portal.auth.mode=Development` does the same for the portal. Use a public address with these try-out settings only on a cluster that is not reachable from outside (a laptop), otherwise configure Entra ID first (see [Going to production](#going-to-production)).
+
+**Managed clusters (AKS, EKS, GKE):** a `LoadBalancer` service gets a public IP from the cloud provider after a minute; use `http://<EXTERNAL-IP>:8080`.
+
+**Colima (k3s):** the bundled load balancer assigns `192.168.5.1`, an address internal to the Colima VM that your Mac cannot reach. Tested: the gateway `LoadBalancer` on port 8080 answers on `http://localhost:8080`, but a second `LoadBalancer` for the portal (ports 8088 and 8090 tried) was not reachable from the Mac. For the portal keep `kubectl port-forward svc/gatewright-portal 8088:8080`. Starting Colima with `--network-address` gives the VM an address reachable from the Mac, which should make the load balancer ports reachable on it; this was not tested.
+
+**kind:** a `LoadBalancer` stays `<pending>` without an add-on such as [cloud-provider-kind](https://github.com/kubernetes-sigs/cloud-provider-kind) or MetalLB. Not tested here. The usual alternative is `NodePort` plus `extraPortMappings` in the kind cluster configuration, which has to be set when the cluster is created.
+
 ## Going to production
 
 Before exposing Gatewright outside the cluster:

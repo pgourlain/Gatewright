@@ -44,7 +44,7 @@ spec:
             {{- toYaml .Values.securityContext | nindent 12 }}
           ports:
             - name: http
-              containerPort: {{ .Values.portal.service.port }}
+              containerPort: 8080
           env:
             - name: Portal__AdminApiBaseUrl
               value: {{ $adminUrl | quote }}
