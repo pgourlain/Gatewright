@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 #
 # Release pipeline (task 15.4), triggered by a `v*` tag (for example v1.0.0 or v0.0.1-rc.1).
-# verify -> packages -> images + chart -> NuGet publication -> GitHub Release.
+# verify -> packages -> images + chart (+ Helm repository on GitHub Pages) -> NuGet publication -> GitHub Release.
 # Procedure and required repository settings: docs/release.md.
 name: Release
 
@@ -197,6 +197,47 @@ jobs:
         with:
           name: chart
           path: artifacts/chart/*.tgz
+
+  helm-repo:
+    name: Publish Helm repository (GitHub Pages)
+    needs: [prepare, chart]
+    runs-on: ubuntu-latest
+    # Publish only from the repository itself, never from a fork.
+    if: github.repository_owner == 'pgourlain'
+    permissions:
+      contents: write
+    concurrency:
+      group: helm-repo
+      cancel-in-progress: false
+    steps:
+      - uses: azure/setup-helm@v5
+      - uses: actions/download-artifact@v8
+        with:
+          name: chart
+          path: chart
+      - name: Add the chart to the gh-pages branch
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          url="https://${GITHUB_REPOSITORY_OWNER,,}.github.io/${GITHUB_REPOSITORY#*/}"
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          if git ls-remote --exit-code --heads "$remote" gh-pages >/dev/null 2>&1; then
+            git clone --quiet --branch gh-pages --single-branch "$remote" site
+          else
+            git init --quiet --initial-branch gh-pages site
+            git -C site remote add origin "$remote"
+          fi
+          cp chart/*.tgz site/
+          merge=()
+          if [[ -f site/index.yaml ]]; then merge=(--merge site/index.yaml); fi
+          helm repo index site --url "$url" "${merge[@]}"
+          cd site
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          git commit -m "chore: publish chart ${{ needs.prepare.outputs.version }}"
+          git push origin gh-pages
 
   nuget:
     name: Publish to NuGet.org

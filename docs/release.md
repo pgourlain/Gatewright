@@ -10,6 +10,7 @@ Releases are cut by a maintainer and built by `.github/workflows/release.yml` wh
 | `NUGET_USER` (repository secret or variable) | GitHub → Settings → Secrets and variables → Actions | The nuget.org profile name used by `NuGet/login`. Alternative: secret `NUGET_API_KEY` (scoped to `Gatewright.*`, push-only) |
 | Environment `nuget` | GitHub → Settings → Environments | Add required reviewers so a tag alone cannot publish to NuGet.org |
 | GHCR packages public | GitHub → Packages | `gatewright-host`, `gatewright-portal`, `charts/gatewright` |
+| GitHub Pages | GitHub → Settings → Pages | Source: *Deploy from a branch*, branch `gh-pages`, folder `/`. The branch is created by the first release |
 | Signing key | local git config | `git config user.signingkey …` and `tag.gpgSign true` (GPG, SSH or gitsign) |
 | Branch protection on `main` | GitHub | Required checks: CI, Licenses, DCO, Changelog |
 
@@ -54,7 +55,7 @@ The release is marked *pre-release* on GitHub, images get only the exact tag (no
 | Images `gatewright-host`, `gatewright-portal`, multi-arch (`linux/amd64`, `linux/arm64`), tags `X.Y.Z`, `X.Y`, `X`, `latest` (stable only), OCI labels (license, source, version, revision) | `ghcr.io/<owner>/` |
 | SLSA build provenance attestation per image | attached to the image in GHCR |
 | SBOM (CycloneDX JSON) per image | release assets |
-| Helm chart `gatewright` (`version` and `appVersion` = release) | `oci://ghcr.io/<owner>/charts` |
+| Helm chart `gatewright` (`version` and `appVersion` = release) | `oci://ghcr.io/<owner>/charts`, and the Helm repository `https://<owner>.github.io/<repo>` (branch `gh-pages`) |
 | `THIRD-PARTY-NOTICES.md` regenerated from the resolved dependencies | release assets and inside the packages |
 | Release body | the matching `CHANGELOG.md` section, extracted by `scripts/extract-changelog.sh` |
 

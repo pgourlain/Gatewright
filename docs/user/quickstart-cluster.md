@@ -22,11 +22,24 @@ kubectl config use-context kind-gatewright
 
 ## 1. Get the chart and the image
 
-The chart is in this repository:
+Choose **one** way to get the chart.
+
+### Chart from the Helm repository (no clone)
+
+```bash
+helm repo add gatewright https://pgourlain.github.io/Gatewright
+helm repo update
+export CHART=gatewright/gatewright
+```
+
+Prereleases (`-rc.N`) are hidden unless you add `--devel` to the `helm install` command. The OCI registry works too: `export CHART=oci://ghcr.io/pgourlain/charts/gatewright`.
+
+### Chart from a clone
 
 ```bash
 git clone https://github.com/pgourlain/Gatewright.git
 cd Gatewright
+export CHART=deploy/helm/gatewright
 ```
 
 Then choose **one** way to get the image.
@@ -41,7 +54,7 @@ export IMAGE_ARGS="--set image.repository=ghcr.io/pgourlain/gatewright-host --se
 
 ### Option B: build the image yourself
 
-Needs the .NET 11 SDK and Docker:
+Needs a clone of the repository (see above), the .NET 11 SDK and Docker:
 
 ```bash
 dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=quickstart -p:MinVerSkip=true
@@ -79,7 +92,7 @@ All variants use the release name `gatewright` in the namespace `gatewright`. Ru
 One pod, no external dependency. The database is a SQLite file on a 1 GiB `PersistentVolumeClaim`. Single replica only.
 
 ```bash
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=all \
   --set controlPlane.auth.developmentBypass=true \
   --set all.service.type=ClusterIP
@@ -90,7 +103,7 @@ helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARG
 Same pod, but the database is a PostgreSQL installed by the chart. **Dev and test only**: a single non-managed `postgres:17-alpine`. Versioned migrations are applied automatically at startup.
 
 ```bash
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=all \
   --set postgres.dev.enabled=true \
   --set controlPlane.auth.developmentBypass=true \
@@ -104,7 +117,7 @@ Same pod, with your own managed PostgreSQL (Azure Database for PostgreSQL, RDS, 
 ```bash
 export PG_CONN='Host=my-postgres.example.com;Database=gatewright;Username=gatewright;Password=CHANGE_ME;SSL Mode=Require'
 
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=all \
   --set-string postgres.connectionString="$PG_CONN" \
   --set controlPlane.auth.developmentBypass=true \
@@ -118,7 +131,7 @@ helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARG
 A control plane (Admin API, one pod, SQLite on a `PersistentVolumeClaim`) and two data plane pods (the proxy). Data planes scale independently and keep serving if the control plane goes down.
 
 ```bash
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=separate \
   --set controlPlane.auth.developmentBypass=true \
   --set controlPlane.service.type=ClusterIP \
@@ -130,7 +143,7 @@ helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARG
 Same as 2a with a bundled PostgreSQL (dev and test only). With PostgreSQL the chart runs **two** control plane pods; one is elected leader through a Kubernetes `Lease`.
 
 ```bash
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=separate \
   --set postgres.dev.enabled=true \
   --set controlPlane.auth.developmentBypass=true \
@@ -145,7 +158,7 @@ The recommended production shape. With PostgreSQL the chart runs two control pla
 ```bash
 export PG_CONN='Host=my-postgres.example.com;Database=gatewright;Username=gatewright;Password=CHANGE_ME;SSL Mode=Require'
 
-helm install gatewright deploy/helm/gatewright --namespace gatewright $IMAGE_ARGS \
+helm install gatewright $CHART --namespace gatewright $IMAGE_ARGS \
   --set gateway.mode=separate \
   --set-string postgres.connectionString="$PG_CONN" \
   --set controlPlane.auth.developmentBypass=true \
@@ -247,7 +260,7 @@ Details in [getting-started](getting-started.md#shared-state-with-redis).
 With the published image (Option A):
 
 ```bash
-helm upgrade gatewright deploy/helm/gatewright --namespace gatewright --reuse-values \
+helm upgrade gatewright $CHART --namespace gatewright --reuse-values \
   --set portal.enabled=true \
   --set portal.image.repository=ghcr.io/pgourlain/gatewright-portal --set portal.image.tag=edge
 ```

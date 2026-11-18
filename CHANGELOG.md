@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Helm repository on GitHub Pages (`helm repo add gatewright https://pgourlain.github.io/Gatewright`), updated by each release, so the quickstart needs no clone
 - Initial project structure, MIT license and governance files (#0)
 - Public policy abstractions: `IGatewayPolicy`, `IPolicyInstance`, `PolicyPhase`, `PolicyResult`, `GatewayContext` (#1.1)
 - JSON configuration model: gateways, products, APIs, operations, backends and policy sets (#1.2)
