@@ -16,49 +16,37 @@ designed to run in Kubernetes as the entry point of the cluster.
 
 ## Quick start
 
-Deploy Gatewright on a Kubernetes cluster (try-out configuration, SQLite, one pod). The chart is in this repository:
+Run Gatewright on a local Kubernetes cluster (kind, Colima, Kiri or Podman) from the **published images**: no clone, no build.
+This installs the all-in-one mode with the web portal, a try-out configuration with sign-in disabled.
 
-Get the chart, **no clone needed**:
+**zsh**:
 
-```bash
-helm repo add gatewright https://pgourlain.github.io/Gatewright && helm repo update
-export CHART=gatewright/gatewright CHART_VERSION=--version=1.0.0-rc.2
-# or, without adding a repository: export CHART=oci://ghcr.io/pgourlain/charts/gatewright CHART_VERSION=--version=1.0.0-rc.2
-kubectl create namespace gatewright
+```zsh
+GW_VERSION=1.0.0-rc.2
+cat > gatewright-values.yaml <<'EOF'
+gateway: { mode: all }
+controlPlane: { auth: { developmentBypass: true } }  # try-out only
+all: { service: { type: ClusterIP } }
+portal: { enabled: true, auth: { mode: Development } }  # try-out only
+EOF
+helm upgrade --install gatewright oci://ghcr.io/pgourlain/charts/gatewright --version $GW_VERSION --namespace gatewright --create-namespace -f gatewright-values.yaml
 ```
 
-Other sources (release asset, Flux, Argo CD) are listed in the [chart README](deploy/helm/gatewright/README.md#install). To build the image yourself or hack on the chart,
-clone the repository and use `export CHART=deploy/helm/gatewright; unset CHART_VERSION`.
+**PowerShell**:
 
-### Option A: use the published image (nothing to build)
-
-```bash
-helm install gatewright $CHART $CHART_VERSION --namespace gatewright \
-  --set image.repository=ghcr.io/pgourlain/gatewright-host --set image.tag=1.0.0-rc.2 \
-  --set gateway.mode=all \
-  --set controlPlane.auth.developmentBypass=true \
-  --set all.service.type=ClusterIP
+```powershell
+$GW_VERSION = '1.0.0-rc.2'
+@'
+gateway: { mode: all }
+controlPlane: { auth: { developmentBypass: true } }  # try-out only
+all: { service: { type: ClusterIP } }
+portal: { enabled: true, auth: { mode: Development } }  # try-out only
+'@ | Set-Content -Encoding ascii gatewright-values.yaml
+helm upgrade --install gatewright oci://ghcr.io/pgourlain/charts/gatewright --version $GW_VERSION --namespace gatewright --create-namespace -f gatewright-values.yaml
 ```
 
-The image tag is a published release; `edge` and commit tags come from a manually triggered workflow and can be stale.
-
-### Option B: build the image yourself
-
-Requires the .NET 11 SDK and Docker. Example on [kind](https://kind.sigs.k8s.io/):
-
-```bash
-dotnet publish src/Gatewright.Host -c Release -t:PublishContainer -p:ContainerImageTag=local -p:MinVerSkip=true
-kind load docker-image gatewright-host:local --name gatewright
-helm install gatewright $CHART $CHART_VERSION --namespace gatewright \
-  --set image.repository=gatewright-host --set image.tag=local --set image.pullPolicy=Never \
-  --set gateway.mode=all \
-  --set controlPlane.auth.developmentBypass=true \
-  --set all.service.type=ClusterIP
-```
-
-On another cluster, push the image to your own registry and set `image.repository`/`image.tag` accordingly.
-
-Then publish your first API and call it: see the [cluster quickstart](docs/user/quickstart-cluster.md), which also covers the `separate` mode and PostgreSQL.
+The [cluster quickstart](docs/user/quickstart-cluster.md) walks through every step: creating the local cluster, the four install options
+(all-in-one or separate, with or without the portal), publishing a first API, and what to expose publicly or keep private.
 
 ### Develop on Gatewright itself
 
@@ -69,7 +57,7 @@ dotnet test Gatewright.slnx
 
 ## Documentation
 
-- Deploy on a Kubernetes cluster, copy-paste, every mode and database: [docs/user/quickstart-cluster.md](docs/user/quickstart-cluster.md)
+- Deploy on a local or real Kubernetes cluster from the published images (zsh and PowerShell): [docs/user/quickstart-cluster.md](docs/user/quickstart-cluster.md)
 - Architecture and pods to deploy per mode: [docs/user/architecture.md](docs/user/architecture.md)
 - All user documentation: [docs/user/README.md](docs/user/README.md); release procedure: [docs/release.md](docs/release.md)
 - Architecture decisions: [docs/adr](docs/adr)
