@@ -1,4 +1,4 @@
-# Gateway -> otel-gui: a single lightweight viewer for traces, logs and metrics (OTLP/HTTP, no collector).
+# Gateway and orders -> otel-gui: a lightweight viewer for traces, logs and metrics (OTLP/HTTP, no collector).
 # The gateway runs with its database and Admin API, and the web portal manages it. Development settings only.
 services:
   orders:
@@ -9,6 +9,12 @@ services:
       args:
         PROJECT: samples/backend-orders
         ASSEMBLY: backend-orders
+    environment:
+      OTEL_SERVICE_NAME: backend-orders
+      OTEL_EXPORTER_OTLP_ENDPOINT: http://otel-gui:4318
+      OTEL_EXPORTER_OTLP_PROTOCOL: http/protobuf
+    depends_on:
+      - otel-gui
 
   gateway:
     image: gatewright/host:dev

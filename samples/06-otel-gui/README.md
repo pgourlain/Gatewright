@@ -15,3 +15,14 @@ for i in $(seq 1 100); do curl -s -o /dev/null http://localhost:8080/orders; don
 
 otel-gui keeps the last 1000 traces/logs in memory (`OTEL_GUI_MAX_TRACES`, `OTEL_GUI_MAX_LOGS`): it is a development tool, not a backend to keep.
 The image tag is `latest`; pin a version for reproducible demos.
+
+## See cooperative cancellation
+
+```bash
+curl -i http://localhost:8080/orders/slow                 # HTTP 204 after 15 seconds
+curl -i --max-time 2 http://localhost:8080/orders/slow    # curl times out (exit code 28)
+```
+
+The second command aborts the client request while the backend is still waiting. ASP.NET Core binds the endpoint's `CancellationToken` to `HttpContext.RequestAborted`; passing it to `Task.Delay` stops the simulated work. No HTTP response is expected after the client disconnects.
+
+In [otel-gui](http://localhost:4318), open **Logs** and look for `Order work cancelled because the request was aborted.` from `backend-orders`. Open the corresponding trace by trace ID and look for `orders.work.cancelled = true` on the `GET /slow` backend span. The completed request has no cancellation tag. Batched telemetry may take a few seconds to appear.

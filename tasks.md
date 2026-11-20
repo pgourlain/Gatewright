@@ -363,6 +363,8 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 
 > Record here, by date, the minor decisions, deviations, blockers and demo commands of each phase.
 
+- 2026-11-20 — #23: covered client abort propagation with a real Kestrel-to-Kestrel integration test; no gateway change was needed. See the [otel-gui cancellation demo](samples/06-otel-gui/README.md#see-cooperative-cancellation) for the cooperative backend example.
+
 - 2026-11-04 — Creation of CLAUDE.md and tasks.md.
 - 2026-11-04 — Product name chosen: Gatewright (replaces the working name MyGateway).
 - 2026-11-04 — Phase 0: repository URL assumed to be `https://github.com/pgourlain/gatewright` (PackageProjectUrl/RepositoryUrl, NOTICE) — to be confirmed. Initially a classic `.sln` as CLAUDE.md said; migrated to `.slnx` later (the .NET 10 default format). Tests: xUnit 2.9 + Shouldly (FluentAssertions v8 is commercial, so rejected). `Microsoft.SourceLink.GitHub` 10.0.403 (8.x versions ship a vulnerable dependency, NU1902).

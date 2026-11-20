@@ -47,6 +47,51 @@ public sealed class ProtocolPassthroughTests
     }
 
     [Fact]
+    public async Task Http_ClientCancelsInFlightRequest_BackendStopsWork()
+    {
+        var backendStarted = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        var backendCancelled = new TaskCompletionSource(TaskCreationOptions.RunContinuationsAsynchronously);
+        using var cleanup = new CancellationTokenSource();
+        await using var gateway = await TestGateway.StartAsync(
+            url => new GatewayConfig { Apis = [TestGateway.Api(url)] },
+            useKestrel: true,
+            configureBackend: backend => backend.MapGet("/slow", async (CancellationToken requestAborted) =>
+            {
+                using var work = CancellationTokenSource.CreateLinkedTokenSource(requestAborted, cleanup.Token);
+                try
+                {
+                    backendStarted.SetResult();
+                    await Task.Delay(Timeout.InfiniteTimeSpan, work.Token);
+                }
+                catch (OperationCanceledException) when (requestAborted.IsCancellationRequested)
+                {
+                    backendCancelled.SetResult();
+                }
+                catch (OperationCanceledException) when (cleanup.IsCancellationRequested)
+                {
+                }
+            }));
+
+        using var clientCancellation = new CancellationTokenSource();
+        var deadline = TimeSpan.FromSeconds(10);
+        var request = gateway.Client.GetAsync("/api/slow", clientCancellation.Token);
+        try
+        {
+            await backendStarted.Task.WaitAsync(deadline);
+            backendCancelled.Task.IsCompleted.ShouldBeFalse();
+
+            await clientCancellation.CancelAsync();
+
+            await Should.ThrowAsync<OperationCanceledException>(() => request.WaitAsync(deadline));
+            await backendCancelled.Task.WaitAsync(deadline);
+        }
+        finally
+        {
+            await cleanup.CancelAsync();
+        }
+    }
+
+    [Fact]
     public async Task Grpc_UnaryAndServerStreaming_PassThroughOverHttp2()
     {
         var backendBuilder = WebApplication.CreateBuilder();

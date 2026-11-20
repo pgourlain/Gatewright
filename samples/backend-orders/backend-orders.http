@@ -1,0 +1,4 @@
+@baseUrl = http://localhost:5101
+
+### Complete the simulated work, or cancel the request before 15 seconds
+GET {{baseUrl}}/slow

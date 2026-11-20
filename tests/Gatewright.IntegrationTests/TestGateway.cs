@@ -17,7 +17,7 @@ using Microsoft.Extensions.DependencyInjection;
 
 namespace Gatewright.IntegrationTests;
 
-/// <summary>An in-memory gateway (TestServer) in front of an echo backend (real Kestrel), configured from a <see cref="GatewayConfig"/>.</summary>
+/// <summary>A gateway (TestServer or Kestrel) in front of a Kestrel backend, configured from a <see cref="GatewayConfig"/>.</summary>
 internal sealed class TestGateway : IAsyncDisposable
 {
     private readonly WebApplication _backend;
@@ -47,7 +47,8 @@ internal sealed class TestGateway : IAsyncDisposable
         Func<string, GatewayConfig> buildConfig,
         Action<IServiceCollection>? configureServices = null,
         IEnumerable<IGatewayPolicy>? extraPolicies = null,
-        bool useKestrel = false)
+        bool useKestrel = false,
+        Action<WebApplication>? configureBackend = null)
     {
         TestGateway? holder = null;
         var flakyCalls = new System.Collections.Concurrent.ConcurrentDictionary<string, int>();
@@ -55,6 +56,7 @@ internal sealed class TestGateway : IAsyncDisposable
         backendBuilder.WebHost.UseUrls("http://127.0.0.1:0");
         var backend = backendBuilder.Build();
         backend.UseWebSockets();
+        configureBackend?.Invoke(backend);
         backend.Map("/{**path}", async (HttpContext ctx) =>
         {
             if (ctx.WebSockets.IsWebSocketRequest)
