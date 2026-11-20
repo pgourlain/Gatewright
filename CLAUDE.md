@@ -134,6 +134,8 @@ kind create cluster --name gatewright && ./scripts/k8s-scale-test.sh   # 14.2: s
 
 The official images (`gatewright-host`, `gatewright-portal`, built above) run as a non-root user on a chiseled base and work with a read-only root filesystem, given three writable mounts: `/tmp`, `/home/app/.aspnet` (ASP.NET Data Protection keys; ephemeral is fine, the data plane is stateless per D1) and wherever `ControlPlane:ConnectionString` points for the SQLite provider. The Helm chart (phase 13) sets `readOnlyRootFilesystem: true` and provides these as `emptyDir` volumes (plus a PVC-backed one for the database path). The root `Dockerfile` (samples, local dev, any project through `PROJECT`/`ASSEMBLY`) is unrelated to this and keeps working as before.
 
+To publish the otel-gui sample catalog on Windows, run `.\samples\06-otel-gui\seed.ps1` from the repository root after starting the [sample stack](samples/06-otel-gui/README.md).
+
 If a command listed here does not exist yet (phase not yet done), do not invent it: create it in the relevant phase and update this section.
 
 ## 6. Code rules

@@ -363,6 +363,8 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 
 > Record here, by date, the minor decisions, deviations, blockers and demo commands of each phase.
 
+- 2026-11-20 — S.1: added a [Windows PowerShell seed script](samples/06-otel-gui/seed.ps1) for the otel-gui sample. Run `.\seed.ps1` from the sample directory to import the catalog and publish it to `dev`.
+
 - 2026-11-20 — #23: covered client abort propagation with a real Kestrel-to-Kestrel integration test; no gateway change was needed. See the [otel-gui cancellation demo](samples/06-otel-gui/README.md#see-cooperative-cancellation) for the cooperative backend example.
 
 - 2026-11-04 — Creation of CLAUDE.md and tasks.md.
