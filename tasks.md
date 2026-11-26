@@ -343,6 +343,23 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 
 ---
 
+## Phase 17 — Gateway API as an optional source (ADR 0017, accepted 2026-11-26)
+
+> Goal: teams declare routes with `HTTPRoute`; the control plane reads them and feeds the database. Off by default, control plane only, the database stays the source of truth (D1, D12).
+
+- [ ] **17.1 Model**: `ApiEntity` and `ApiDefinition` gain the source marker (`Source`, `SourceRef`, requested product), optional `hosts` (YARP route hosts; additive, `gatewright/v1` stays), EF migration (Postgres) and export/import support. The snapshot translator turns an API from this source with no product, an unknown product or no policy at product/API/operation scope into a **blocked** route: `503` `application/problem+json` with code `api-not-configured` and the request id, the reason only in logs and metrics.
+  AC: unit tests for each blocked reason and for unblocking when the product gets a policy; other APIs unchanged; no per-request cost.
+- [ ] **17.2 Reading and mapping**: `Gateway` and `HTTPRoute` (v1) watchers in `Gatewright.Kubernetes` (custom objects, no new dependency, leader only), a pure mapper `HTTPRoute` → desired API with the reasons for unsupported features (ADR 0017 §"Decisions taken at implementation").
+  AC: mapper unit tests (paths, methods, hostnames, backend, annotation, every unsupported case); watcher tests with a fake client.
+- [ ] **17.3 Synchronization**: reconciliation of the desired APIs with the database (create, modify with `generation`, delete), one coalesced revision `api.gatewayapi-sync` actor `system:gatewayapi`, publication to `GatewayApi:PublishTo`, deletion safeguards (complete list only, N consecutive absences, cap per cycle).
+  AC: tests on SQLite for create, modify, delete, missed delete, empty or failed list never deleting, cap reached; manual APIs never touched.
+- [ ] **17.4 Ownership and status**: APIs from this source are read-only in the Admin API (`409`), `POST /apis/{name}/detach` makes one manual, optional `GatewayApi:WriteStatus` patches `Accepted` / `ResolvedRefs` on the route status, Helm RBAC only when enabled.
+  AC: Admin API tests (409, detach, audit); status patch test with a fake client; `helm lint` green with and without the feature.
+- [ ] **17.5 Documentation**: `docs/user/gateway-api.md` (setup, supported subset, annotation, blocking and the `503` code, deletion, rollback caveat), CHANGELOG, `docs/user/README.md` index.
+  AC: doc claims checked against the code.
+
+---
+
 ## Backlog (outside V1 scope, do not implement without approval)
 
 - CEL expressions in policies (conditions, dynamic values)
@@ -350,7 +367,6 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 - Sandboxed WASM plugins
 - Email notifications for developer portal events (see 16.0 (d))
 - Local username/password authentication for the admin portal and Admin API, next to OIDC (proposal in `docs/adr/0016-local-password-authentication.md`, status Proposed; needs maintainer validation and a CLAUDE.md §6 amendment before any code)
-- Kubernetes Gateway API (`HTTPRoute`) as an optional configuration source: reconciliation, deletion with safeguards, ownership, fail-closed `503` for APIs without product or policy (proposal in `docs/adr/0017-gateway-api-optional-source.md`, status Proposed; needs maintainer validation and a CLAUDE.md §2 (D1/D2) amendment before any code)
 - Auto-import: remove or flag the API when its discovered Service disappears, and mark auto-imported APIs so manual edits are not silently overwritten (shares the ownership and reconciliation design of ADR 0017)
 - Event Hubs / Kafka usage sink (12.4)
 - Per-plan limits (a plan is currently only a label)

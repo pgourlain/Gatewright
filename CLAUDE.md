@@ -34,7 +34,7 @@ LB ──► Data plane (YARP, N pods, HPA) ──► backend pods (direct LB th
 | # | Decision | Reason |
 |---|---|---|
 | D1 | Source of truth = control plane database, **not** CRDs | Simplicity for web technicians, independence from Kubernetes versions |
-| D2 | Kubernetes is used only for discovery (Services annotated `gatewright.io/expose`, EndpointSlices, TLS Secrets) | Also works outside Kubernetes |
+| D2 | Kubernetes is used for discovery (Services annotated `gatewright.io/expose`, EndpointSlices, TLS Secrets) and, optionally, as a declarative source of routing shape (Gateway API `HTTPRoute`, D12) | Also works outside Kubernetes |
 | D3 | Control plane / data plane separation, same binary, selected by `Gateway:Mode` | Scalability + simple dev |
 | D4 | CP → DP distribution through **custom gRPC** (versioned snapshot + deltas), not xDS | Simple to evolve in C# |
 | D5 | The data plane keeps the **last known good config**; a CP outage never stops traffic | Resilience |
@@ -44,6 +44,7 @@ LB ──► Data plane (YARP, N pods, HPA) ──► backend pods (direct LB th
 | D9 | V1 extensibility = built-in policies + **.NET plugins through the distribution model** (NuGet + customer image). No dynamic DLL loading. CEL expressions in V2, WASM later | Robustness |
 | D10 | One image (the customer's if customized) for CP and DP, so that the CP knows the schemas of custom policies | Consistent validation |
 | D11 | Public TLS can be terminated upstream (Front Door / App Gateway); Gatewright can also terminate TLS (SNI, hot reload) | Azure context |
+| D12 | Gateway API `HTTPRoute` is an **optional** source that feeds the database (off by default, control plane only, ADR 0017). It never replaces the database, no CRD is required, and an API from this source without a product or without policies is blocked with a `503` | Multi-team declaration with Kubernetes RBAC, without giving up D1 |
 
 ## 3. Technical stack
 
@@ -169,7 +170,7 @@ If a command listed here does not exist yet (phase not yet done), do not invent 
 - Never a plaintext secret in the config or the database: references (Key Vault, Kubernetes Secret) resolved at runtime.
 - API keys stored **hashed** (SHA-256 + salt/pepper), constant-time comparison.
 - Admin API and portal protected by Entra ID (OIDC) with roles (`Admin`, `Publisher`, `Reader`).
-- Minimal Kubernetes RBAC: only the control plane reads the Kubernetes API; the data plane has no Kubernetes rights.
+- Minimal Kubernetes RBAC: only the control plane reads the Kubernetes API (plus a patch on `httproutes/status` when `GatewayApi:WriteStatus` is enabled); the data plane has no Kubernetes rights.
 
 ## 7. Open source, license and changelog
 

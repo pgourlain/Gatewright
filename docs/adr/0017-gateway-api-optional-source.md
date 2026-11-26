@@ -1,6 +1,6 @@
 # ADR 0017: Kubernetes Gateway API as an optional configuration source
 
-- Status: Proposed (maintainer validation required)
+- Status: Accepted (2026-11-26, maintainer)
 - Date: 2026-11-26
 
 ## Context
@@ -105,3 +105,27 @@ annotation discovery. It does not replace the database, and nothing requires it.
    built-in policies.
 6. **Out of scope here:** multi-tenancy (teams, scoped roles), `GRPCRoute` / `TLSRoute`, and deriving
    listeners from `Gateway` objects.
+
+## Decisions taken at implementation (2026-11-26)
+
+The open questions above were settled as follows, the simplest option each time:
+
+1. **No policy**: an API is blocked when it has no product, an unknown product, or no policy at product,
+   API or operation scope (global and gateway policies apply to everything and do not count). Requiring
+   an authentication policy is not enforced.
+2. **Status write-back**: implemented, but off by default (`GatewayApi:WriteStatus=false`). The Helm chart
+   grants the `httproutes/status` patch right only when it is enabled.
+3. **Environment**: the routes publish to `GatewayApi:PublishTo`, as the auto-import does with its own list.
+4. **Rollback**: no "pause sync" yet. A rollback of an API from this source is overwritten by the next
+   reconciliation; the documentation says so.
+5. **Filters**: none in this version. A route that uses a filter, a header or query match, a regular
+   expression path, several distinct backends or a weight is reported `Accepted=False`
+   (`UnsupportedValue`) and not published, never half-mapped.
+6. **Hostnames**: the data plane had no host matching, so `hostnames` could not be mapped. An optional
+   `hosts` list is added to the API definition (additive, `gatewright/v1` stays) and becomes the YARP route
+   `Hosts`.
+7. **Product reference**: the requested product name is stored with the API and resolved when the
+   configuration is exported, so an unknown product never makes a whole configuration invalid, and an API
+   unblocks itself when its product appears.
+8. **Gateway selection**: the control plane watches `Gateway` objects and keeps the routes whose parent is
+   a Gateway with `spec.gatewayClassName` equal to `GatewayApi:GatewayClassName` (default `gatewright`).
