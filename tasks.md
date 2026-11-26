@@ -350,6 +350,8 @@ For each policy: config record, schema, compilation, unit tests and one integrat
 - Sandboxed WASM plugins
 - Email notifications for developer portal events (see 16.0 (d))
 - Local username/password authentication for the admin portal and Admin API, next to OIDC (proposal in `docs/adr/0016-local-password-authentication.md`, status Proposed; needs maintainer validation and a CLAUDE.md §6 amendment before any code)
+- Kubernetes Gateway API (`HTTPRoute`) as an optional configuration source: reconciliation, deletion with safeguards, ownership, fail-closed `503` for APIs without product or policy (proposal in `docs/adr/0017-gateway-api-optional-source.md`, status Proposed; needs maintainer validation and a CLAUDE.md §2 (D1/D2) amendment before any code)
+- Auto-import: remove or flag the API when its discovered Service disappears, and mark auto-imported APIs so manual edits are not silently overwritten (shares the ownership and reconciliation design of ADR 0017)
 - Event Hubs / Kafka usage sink (12.4)
 - Per-plan limits (a plan is currently only a label)
 - Usage-based monetization / billing
