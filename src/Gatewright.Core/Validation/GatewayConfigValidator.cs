@@ -52,8 +52,12 @@ public sealed partial class GatewayConfigValidator
         return errors;
     }
 
-    private static string HostKey(ApiDefinition api) =>
-        api.Hosts is { Count: > 0 } hosts ? string.Join(',', hosts.Select(h => h.ToLowerInvariant()).Order(StringComparer.Ordinal)) : "*";
+    /// <summary>Builds the key under which two APIs conflict: the same hosts (none means any host) and the same base path.</summary>
+    /// <param name="basePath">The base path.</param>
+    /// <param name="hosts">The hosts, or <see langword="null"/>.</param>
+    /// <returns>The key.</returns>
+    public static string ConflictKey(string basePath, IReadOnlyList<string>? hosts) =>
+        (hosts is { Count: > 0 } ? string.Join(',', hosts.Select(h => h.ToLowerInvariant()).Order(StringComparer.Ordinal)) : "*") + "|" + NormalizePath(basePath);
 
     private static string NormalizePath(string path)
     {
@@ -176,7 +180,7 @@ public sealed partial class GatewayConfigValidator
             }
             else
             {
-                var key = HostKey(api) + "|" + NormalizePath(api.BasePath);
+                var key = ConflictKey(api.BasePath, api.Hosts);
                 if (basePaths.TryGetValue(key, out var other))
                 {
                     Add(errors, "api.path-conflict", path + ".basePath", $"Base path '{api.BasePath}' conflicts with API '{other}'.");

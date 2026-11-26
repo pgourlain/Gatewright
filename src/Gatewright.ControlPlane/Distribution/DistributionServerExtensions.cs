@@ -73,4 +73,22 @@ public static class DistributionServerExtensions
         services.AddHostedService<OpenApiAutoImportService>();
         return services;
     }
+
+    /// <summary>Registers the synchronization of Gateway API routes into the database when <c>GatewayApi:Enabled</c> is set (ADR 0017).</summary>
+    /// <param name="services">The service collection.</param>
+    /// <param name="configuration">The application configuration.</param>
+    /// <returns>The service collection.</returns>
+    public static IServiceCollection AddGatewayApiSynchronizer(this IServiceCollection services, IConfiguration configuration)
+    {
+        ArgumentNullException.ThrowIfNull(services);
+        ArgumentNullException.ThrowIfNull(configuration);
+        var section = configuration.GetSection(GatewayApiSyncOptions.SectionName);
+        if (section.GetValue<bool>(nameof(GatewayApiSyncOptions.Enabled)))
+        {
+            services.Configure<GatewayApiSyncOptions>(section);
+            services.TryAddSingleton<Gatewright.Core.Discovery.IGatewayApiSink, GatewayApiSynchronizer>();
+        }
+
+        return services;
+    }
 }

@@ -91,7 +91,10 @@ public sealed class SnapshotTranslator
     }
 
     /// <summary>Tells why an API synchronized from Gateway API must be blocked (fail closed, ADR 0017), or <see langword="null"/> when it can serve.</summary>
-    private static string? BlockReason(GatewayConfig config, ApiDefinition api)
+    /// <param name="config">The configuration.</param>
+    /// <param name="api">The API.</param>
+    /// <returns><c>MissingProduct</c>, <c>ProductNotFound</c>, <c>NoPolicy</c>, or <see langword="null"/>.</returns>
+    public static string? BlockReason(GatewayConfig config, ApiDefinition api)
     {
         if (api.Source is not { Kind: ApiSource.GatewayApi } source)
         {

@@ -66,6 +66,7 @@ internal static class GatewrightServiceCollectionExtensions
                         services.AddHostedService<LocalEndpointsApplierService>();
                         services.AddHostedService<LocalSecretsApplierService>();
                         services.AddOpenApiAutoImport(configuration);
+                        services.AddGatewayApiSynchronizer(configuration);
                     }
 
                     services.AddHostedService(sp => new PublicationWatcherService(
@@ -94,6 +95,7 @@ internal static class GatewrightServiceCollectionExtensions
                 if (services.AddKubernetesDiscoveryIfEnabled(configuration))
                 {
                     services.AddOpenApiAutoImport(configuration);
+                    services.AddGatewayApiSynchronizer(configuration);
                 }
 
                 break;
