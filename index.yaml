@@ -4,8 +4,31 @@ entries:
   - annotations:
       licenses: MIT
     apiVersion: v2
+    appVersion: 1.0.0
+    created: "2026-11-26T18:39:48.313966053Z"
+    description: Gatewright — API Management and reverse proxy (YARP) for Kubernetes.
+    digest: 2c67257be82ce74a554aaf7966c60e999661b5d6801c924b331d6bbfdad65326
+    home: https://github.com/pgourlain/gatewright
+    keywords:
+    - api-management
+    - apim
+    - gateway
+    - reverse-proxy
+    - yarp
+    maintainers:
+    - name: Pierrick Gourlain
+    name: gatewright
+    sources:
+    - https://github.com/pgourlain/gatewright
+    type: application
+    urls:
+    - https://pgourlain.github.io/Gatewright/gatewright-1.0.0.tgz
+    version: 1.0.0
+  - annotations:
+      licenses: MIT
+    apiVersion: v2
     appVersion: 1.0.0-rc.2
-    created: "2026-11-18T17:40:23.960578799Z"
+    created: "2026-11-26T18:39:48.313191862Z"
     description: Gatewright — API Management and reverse proxy (YARP) for Kubernetes.
     digest: efc9fa12b2ffcbc8c7457e1faead0c5024345a432fb7dfa0e2eeb1d9b5cb1277
     home: https://github.com/pgourlain/gatewright
@@ -24,4 +47,4 @@ entries:
     urls:
     - https://pgourlain.github.io/Gatewright/gatewright-1.0.0-rc.2.tgz
     version: 1.0.0-rc.2
-generated: "2026-11-18T17:40:23.959761331Z"
+generated: "2026-11-26T18:39:48.312242962Z"
