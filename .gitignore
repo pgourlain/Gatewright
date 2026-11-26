@@ -10,3 +10,6 @@ artifacts/
 .DS_Store
 *.nupkg
 *.snupkg
+
+# Archify working folders (keep curated output in docs/architecture)
+.archify/
