@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+### Changed
+
+### Deprecated
+
+### Removed
+
+### Fixed
+
+### Security
+
+## [1.0.0] - 2026-11-26
+
+### Added
+
 - APIs synchronized from Gateway API are read-only in the Admin API (`409`), `POST /apis/{name}/detach` makes one manual, `GET /apis` shows their `source` and `hosts`; `GatewayApi:WriteStatus` reports `Accepted` and `gatewright.io/Configured` on the route status; Helm values `gatewayApi.*` add the matching RBAC only when enabled (#17.4)
 - Optional Kubernetes Gateway API source (`GatewayApi:Enabled`, `HTTPRoute` v1): routes attached to a Gateway of class `GatewayApi:GatewayClassName` become APIs, are updated when the route changes and are deleted, with safeguards, when it disappears; unsupported features are reported and the route is not applied (#17.2, #17.3)
 - Optional `hosts` on an API (route matching by host name, wildcards allowed; the same base path can be used on different hosts) and an API `source` marker; an API synchronized from Gateway API without a product, with an unknown product or without any policy answers `503` (`api-not-configured`) (#17.1)
@@ -96,10 +110,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - The default environments are now `dev`, `staging` and `prod` (the second one was named `recette`); an existing development database keeps its old `recette` environment next to the new one (#S.5)
 - Kestrel no longer sends a `Server` response header; backend connections now allow multiple HTTP/2 connections per destination instead of multiplexing everything over one; the `jwt` policy's key lookup and scope/claim checks no longer allocate through LINQ on the hot path (#14.3)
 
-### Deprecated
-
-### Removed
-
 ### Fixed
 
 - Portal in Oidc mode without `Portal:Auth:Authority`/`ClientId` now fails at startup with an explicit message instead of answering 500 on every request, `/healthz` included; `Portal:Auth:Mode=Development` (no sign-in, for try-outs) no longer requires `ASPNETCORE_ENVIRONMENT=Development` and logs a warning, so `portal.auth.mode=Development` works from the Helm chart
@@ -110,4 +120,5 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - `headers` policy: header names and literal values containing CR, LF, NUL or delimiter characters are rejected when the policy is compiled, and control characters are stripped from values resolved from claims, request headers and variables, so a crafted claim or header can no longer inject headers. **BREAKING (minor):** a configuration with an invalid header name now fails validation (#15.1)
 
-[Unreleased]: https://github.com/pgourlain/gatewright/commits/main
+[Unreleased]: https://github.com/pgourlain/gatewright/compare/v1.0.0...HEAD
+[1.0.0]: https://github.com/pgourlain/gatewright/releases/tag/v1.0.0
