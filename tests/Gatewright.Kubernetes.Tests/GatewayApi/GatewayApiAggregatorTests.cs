@@ -77,6 +77,26 @@ public sealed class GatewayApiAggregatorTests
     }
 
     [Fact]
+    public void IsReady_OnlyWhenBothListsAreCompleteAndNotBeingRebuilt()
+    {
+        var aggregator = Create();
+        aggregator.IsReady.ShouldBeFalse();
+
+        aggregator.MarkRoutesListed();
+        aggregator.IsReady.ShouldBeFalse();
+        aggregator.MarkGatewaysListed();
+        aggregator.IsReady.ShouldBeTrue();
+
+        aggregator.ClearRoutes();
+        aggregator.IsReady.ShouldBeFalse();
+        aggregator.MarkRoutesListed();
+        aggregator.ClearGateways();
+        aggregator.IsReady.ShouldBeFalse();
+        aggregator.MarkGatewaysListed();
+        aggregator.IsReady.ShouldBeTrue();
+    }
+
+    [Fact]
     public void ReferencedServices_ListsTheBackendsOfApplicableRoutesOnly()
     {
         var aggregator = Create();

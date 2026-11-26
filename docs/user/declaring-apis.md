@@ -46,7 +46,11 @@ Annotate a Service and the control plane (leader replica) discovers it:
 
 Auto-publication is off unless `Kubernetes:AutoImport:PublishTo` lists environments.
 
-## 5. CLI and GitOps
+## 5. Kubernetes Gateway API (optional)
+
+On a cluster shared by several teams, each team can declare an `HTTPRoute` instead; Gatewright reads it and creates, updates and deletes the matching API. Such an API is read-only in the portal and the Admin API, and it answers `503` until its route names a product that has policies. See [Gateway API](gateway-api.md).
+
+## 6. CLI and GitOps
 
 `gatewright config export --env prod -o prod.json` and `config import` move a whole environment as one JSON file; `config validate` runs the control plane's rules offline. See the [CLI reference](cli.md). Export then import yields the same configuration hash, which makes promotion between environments reproducible.
 

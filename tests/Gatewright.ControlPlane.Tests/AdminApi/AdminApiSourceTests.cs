@@ -85,6 +85,7 @@ public sealed class AdminApiSourceTests
 
         var response = await host.Client.PostAsync("/admin/v1/apis/import?name=shop.orders&service=shop/orders:80", new StringContent(document, Encoding.UTF8, "application/yaml"));
 
+        response.StatusCode.ShouldBe(HttpStatusCode.BadRequest);
         (await response.Content.ReadAsStringAsync()).ShouldContain("detach");
     }
 

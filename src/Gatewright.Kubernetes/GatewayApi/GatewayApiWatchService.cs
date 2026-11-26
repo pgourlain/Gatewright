@@ -92,8 +92,6 @@ public sealed partial class GatewayApiWatchService : BackgroundService
     {
         var aggregator = new GatewayApiAggregator(_kubernetes.AnnotationPrefix, _options.GatewayClassName);
         using var changes = new SemaphoreSlim(0, 1);
-        var routesListed = false;
-        var gatewaysListed = false;
 
         void Signal()
         {
@@ -116,7 +114,7 @@ public sealed partial class GatewayApiWatchService : BackgroundService
             aggregator.RemoveGateway,
             () =>
             {
-                gatewaysListed = true;
+                aggregator.MarkGatewaysListed();
                 Signal();
             },
             _logger);
@@ -129,18 +127,18 @@ public sealed partial class GatewayApiWatchService : BackgroundService
             aggregator.RemoveRoute,
             () =>
             {
-                routesListed = true;
+                aggregator.MarkRoutesListed();
                 Signal();
             },
             _logger);
 
-        var loop = ReconcileLoopAsync(aggregator, changes, () => routesListed && gatewaysListed, cancellationToken);
+        var loop = ReconcileLoopAsync(aggregator, changes, cancellationToken);
         var tasks = new[] { gateways.RunAsync(cancellationToken), routes.RunAsync(cancellationToken), loop };
         await Task.WhenAny(tasks).ConfigureAwait(false);
         await Task.WhenAll(tasks).ConfigureAwait(false);
     }
 
-    private async Task ReconcileLoopAsync(GatewayApiAggregator aggregator, SemaphoreSlim changes, Func<bool> listed, CancellationToken cancellationToken)
+    private async Task ReconcileLoopAsync(GatewayApiAggregator aggregator, SemaphoreSlim changes, CancellationToken cancellationToken)
     {
         var debounce = TimeSpan.FromMilliseconds(Math.Max(0, _options.DebounceMilliseconds));
         var period = TimeSpan.FromSeconds(Math.Max(1, _options.ReconcileSeconds));
@@ -151,7 +149,7 @@ public sealed partial class GatewayApiWatchService : BackgroundService
                 // Wakes on a change, or after the period so that absences are counted and a missed event is repaired.
                 await changes.WaitAsync(period, cancellationToken).ConfigureAwait(false);
                 await Task.Delay(debounce, cancellationToken).ConfigureAwait(false);
-                if (!listed())
+                if (!aggregator.IsReady)
                 {
                     continue;
                 }

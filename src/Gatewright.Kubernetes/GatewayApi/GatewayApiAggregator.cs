@@ -12,6 +12,8 @@ public sealed class GatewayApiAggregator
     private readonly Dictionary<string, HttpRoute> _routes = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Gateway> _gateways = new(StringComparer.Ordinal);
     private readonly string _annotationPrefix;
+    private bool _routesListed;
+    private bool _gatewaysListed;
     private readonly string _gatewayClassName;
 
     /// <summary>Initializes a new instance of the <see cref="GatewayApiAggregator"/> class.</summary>
@@ -21,6 +23,39 @@ public sealed class GatewayApiAggregator
     {
         _annotationPrefix = annotationPrefix;
         _gatewayClassName = gatewayClassName;
+    }
+
+    /// <summary>
+    /// Gets a value indicating whether both lists are complete. It turns <see langword="false"/> while a list is being rebuilt, so that a
+    /// reconciliation never sees a half-filled view (and counts false absences).
+    /// </summary>
+    public bool IsReady
+    {
+        get
+        {
+            lock (_gate)
+            {
+                return _routesListed && _gatewaysListed;
+            }
+        }
+    }
+
+    /// <summary>Tells that the routes are listed completely.</summary>
+    public void MarkRoutesListed()
+    {
+        lock (_gate)
+        {
+            _routesListed = true;
+        }
+    }
+
+    /// <summary>Tells that the Gateways are listed completely.</summary>
+    public void MarkGatewaysListed()
+    {
+        lock (_gate)
+        {
+            _gatewaysListed = true;
+        }
     }
 
     /// <summary>Records an added or modified route.</summary>
@@ -49,6 +84,7 @@ public sealed class GatewayApiAggregator
         lock (_gate)
         {
             _routes.Clear();
+            _routesListed = false;
         }
     }
 
@@ -78,6 +114,7 @@ public sealed class GatewayApiAggregator
         lock (_gate)
         {
             _gateways.Clear();
+            _gatewaysListed = false;
         }
     }
 
