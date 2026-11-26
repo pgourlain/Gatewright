@@ -20,6 +20,7 @@ public sealed partial class KubernetesDiscoveryService : BackgroundService
     private readonly ILeaderElection _leader;
     private readonly IDiscoveryStore _store;
     private readonly KubernetesOptions _options;
+    private readonly GatewayApi.GatewayApiReferences? _references;
     private readonly ILogger<KubernetesDiscoveryService> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="KubernetesDiscoveryService"/> class.</summary>
@@ -28,12 +29,14 @@ public sealed partial class KubernetesDiscoveryService : BackgroundService
     /// <param name="store">Where discovered state is written.</param>
     /// <param name="options">The Kubernetes options.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="references">The Services referenced by served <c>HTTPRoute</c> objects, when the Gateway API source is enabled.</param>
     public KubernetesDiscoveryService(
         IKubernetes client,
         ILeaderElection leader,
         IDiscoveryStore store,
         IOptions<KubernetesOptions> options,
-        ILogger<KubernetesDiscoveryService> logger)
+        ILogger<KubernetesDiscoveryService> logger,
+        GatewayApi.GatewayApiReferences? references = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(leader);
@@ -45,6 +48,7 @@ public sealed partial class KubernetesDiscoveryService : BackgroundService
         _store = store;
         _options = options.Value;
         _logger = logger;
+        _references = references;
     }
 
     /// <inheritdoc/>
@@ -76,7 +80,7 @@ public sealed partial class KubernetesDiscoveryService : BackgroundService
 
     private async Task RunAsLeaderAsync(CancellationToken cancellationToken)
     {
-        var aggregator = new ClusterStateAggregator(_options.AnnotationPrefix);
+        var aggregator = new ClusterStateAggregator(_options.AnnotationPrefix, _references);
         using var changes = new SemaphoreSlim(0, 1);
         void Changed()
         {
@@ -88,6 +92,12 @@ public sealed partial class KubernetesDiscoveryService : BackgroundService
             {
                 // A write is already pending.
             }
+        }
+
+        if (_references is not null)
+        {
+            _references.Changed += Changed;
+            cancellationToken.Register(() => _references.Changed -= Changed);
         }
 
         var services = new ResourceWatcher<V1Service, V1ServiceList>(

@@ -39,7 +39,14 @@ public static class KubernetesServiceCollectionExtensions
         services.AddSingleton<LeaseLeaderElection>();
         services.AddSingleton<ILeaderElection>(sp => sp.GetRequiredService<LeaseLeaderElection>());
         services.AddHostedService(sp => sp.GetRequiredService<LeaseLeaderElection>());
+        services.AddSingleton<GatewayApi.GatewayApiReferences>();
         services.AddHostedService<KubernetesDiscoveryService>();
+        if (configuration.GetSection(GatewayApi.GatewayApiOptions.SectionName).GetValue<bool>(nameof(GatewayApi.GatewayApiOptions.Enabled)))
+        {
+            services.Configure<GatewayApi.GatewayApiOptions>(configuration.GetSection(GatewayApi.GatewayApiOptions.SectionName));
+            services.AddHostedService<GatewayApi.GatewayApiWatchService>();
+        }
+
         services.TryAddSingleton<Gatewright.Core.Security.ISecretFetcher, KubernetesSecretFetcher>();
         return true;
     }

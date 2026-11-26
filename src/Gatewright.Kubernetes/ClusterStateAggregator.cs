@@ -10,13 +10,19 @@ namespace Gatewright.Kubernetes;
 public sealed class ClusterStateAggregator
 {
     private readonly string _prefix;
+    private readonly GatewayApi.GatewayApiReferences? _references;
     private readonly object _gate = new();
     private readonly Dictionary<string, V1Service> _services = new(StringComparer.Ordinal);
     private readonly Dictionary<string, V1EndpointSlice> _slices = new(StringComparer.Ordinal);
 
     /// <summary>Initializes a new instance of the <see cref="ClusterStateAggregator"/> class.</summary>
     /// <param name="annotationPrefix">The annotation prefix.</param>
-    public ClusterStateAggregator(string annotationPrefix) => _prefix = annotationPrefix;
+    /// <param name="references">The Services referenced by served <c>HTTPRoute</c> objects, whose endpoints are discovered without an annotation.</param>
+    public ClusterStateAggregator(string annotationPrefix, GatewayApi.GatewayApiReferences? references = null)
+    {
+        _prefix = annotationPrefix;
+        _references = references;
+    }
 
     /// <summary>Adds or replaces a Service.</summary>
     /// <param name="service">The Service.</param>
@@ -84,7 +90,12 @@ public sealed class ClusterStateAggregator
         {
             var exposed = _services.Values.Where(s => KubernetesMapper.IsExposed(s, _prefix)).ToList();
             var addresses = new Dictionary<string, IReadOnlyList<string>>(StringComparer.Ordinal);
-            foreach (var service in exposed)
+
+            // A Service referenced by a served HTTPRoute needs no annotation: its endpoints are discovered, but it is not listed as exposed.
+            var referenced = _references is null
+                ? []
+                : _services.Values.Where(s => !KubernetesMapper.IsExposed(s, _prefix) && _references.Contains(s.Metadata.NamespaceProperty, s.Metadata.Name)).ToList();
+            foreach (var service in exposed.Concat(referenced))
             {
                 var slices = _slices.Values.Where(s =>
                     s.Metadata.NamespaceProperty == service.Metadata.NamespaceProperty
