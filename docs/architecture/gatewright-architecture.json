@@ -1,0 +1,374 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Gatewright architecture (control-plane / data-plane split)",
+    "output": ".archify/architecture-gatewright-20261126-180310/gatewright.html",
+    "quality_profile": "showcase",
+    "locale": "en",
+    "repository": {
+      "url": "https://github.com/pgourlain/Gatewright.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "b76f26c1e7b292f1e8f9e54b594b5b49f73541d7"
+    }
+  },
+  "layout": {
+    "mode": "grid",
+    "cols": 6
+  },
+  "components": [
+    {
+      "id": "operators",
+      "type": "external",
+      "label": "Operators / CI",
+      "sublabel": "Admin, Publisher, Reader",
+      "row": 0,
+      "col": 0
+    },
+    {
+      "id": "portal",
+      "type": "frontend",
+      "label": "Portal",
+      "sublabel": "Blazor web app",
+      "sources": [
+        {
+          "path": "src/Gatewright.Portal/Services/PortalApi.cs",
+          "line": 105,
+          "end_line": 120
+        }
+      ],
+      "row": 0,
+      "col": 1
+    },
+    {
+      "id": "cli",
+      "type": "frontend",
+      "label": "gatewright CLI",
+      "sublabel": "OpenAPI import, export",
+      "sources": [
+        {
+          "path": "src/Gatewright.Cli/AdminClient.cs",
+          "line": 36,
+          "end_line": 70
+        }
+      ],
+      "row": 1,
+      "col": 1
+    },
+    {
+      "id": "adminapi",
+      "type": "backend",
+      "label": "Admin API",
+      "sublabel": "revisions, publish, rollback",
+      "tag": "control plane",
+      "explanation": "Every change creates a revision; publishing to an environment and rollback are explicit Admin API calls.",
+      "sources": [
+        {
+          "path": "src/Gatewright.ControlPlane/AdminApi/AdminEndpoints.cs",
+          "line": 11,
+          "end_line": 30
+        },
+        {
+          "path": "src/Gatewright.ControlPlane/AdminApi/AdminEndpoints.Publishing.cs",
+          "line": 21,
+          "end_line": 80
+        },
+        {
+          "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
+          "line": 169,
+          "end_line": 188
+        }
+      ],
+      "row": 0,
+      "col": 2
+    },
+    {
+      "id": "db",
+      "type": "database",
+      "label": "Config database",
+      "sublabel": "PostgreSQL or SQLite",
+      "sources": [
+        {
+          "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
+          "line": 172,
+          "end_line": 183
+        }
+      ],
+      "row": 0,
+      "col": 3
+    },
+    {
+      "id": "k8sapi",
+      "type": "cloud",
+      "label": "Kubernetes API",
+      "sublabel": "Services, EndpointSlices",
+      "row": 0,
+      "col": 5
+    },
+    {
+      "id": "discovery",
+      "type": "backend",
+      "label": "K8s discovery",
+      "sublabel": "watches; Lease leader",
+      "tag": "control plane",
+      "sources": [
+        {
+          "path": "src/Gatewright.Kubernetes/KubernetesDiscoveryService.cs",
+          "line": 93,
+          "end_line": 128
+        },
+        {
+          "path": "src/Gatewright.Kubernetes/KubernetesServiceCollectionExtensions.cs",
+          "line": 39,
+          "end_line": 42
+        }
+      ],
+      "row": 0,
+      "col": 4
+    },
+    {
+      "id": "distserver",
+      "type": "backend",
+      "label": "Distribution server",
+      "sublabel": "gRPC Subscribe stream",
+      "tag": "control plane",
+      "explanation": "PublicationHub polls the database for the published revision of an environment; ConfigDistributionService streams snapshots, discovered endpoints and TLS secrets to each subscribed data-plane pod.",
+      "sources": [
+        {
+          "path": "src/Gatewright.ControlPlane/Distribution/ConfigDistributionService.cs",
+          "line": 65,
+          "end_line": 105
+        },
+        {
+          "path": "src/Gatewright.ControlPlane/Distribution/PublicationHub.cs",
+          "line": 71,
+          "end_line": 111
+        },
+        {
+          "path": "src/Gatewright.Distribution/Protos/distribution.proto",
+          "line": 12,
+          "end_line": 18
+        }
+      ],
+      "row": 1,
+      "col": 3
+    },
+    {
+      "id": "dpclient",
+      "type": "backend",
+      "label": "Snapshot applier",
+      "sublabel": "gRPC client, YARP config",
+      "tag": "data plane",
+      "explanation": "GrpcConfigClientService subscribes to the control plane and applies each snapshot through SnapshotApplier, which swaps YARP's InMemoryConfigProvider routes and clusters. The last applied config keeps serving if the control plane is down.",
+      "sources": [
+        {
+          "path": "src/Gatewright.DataPlane/GrpcConfigClientService.cs",
+          "line": 111,
+          "end_line": 149
+        },
+        {
+          "path": "src/Gatewright.DataPlane/SnapshotApplier.cs",
+          "line": 17,
+          "end_line": 111
+        }
+      ],
+      "row": 2,
+      "col": 3
+    },
+    {
+      "id": "clients",
+      "type": "external",
+      "label": "API clients",
+      "sublabel": "via LB or Front Door",
+      "row": 3,
+      "col": 2
+    },
+    {
+      "id": "proxy",
+      "type": "backend",
+      "label": "YARP proxy",
+      "sublabel": "policy pipeline, TLS/SNI",
+      "tag": "data plane, N pods",
+      "explanation": "PolicyMiddleware runs the compiled Inbound / Backend / Outbound / OnError policies before YARP forwards the request.",
+      "sources": [
+        {
+          "path": "src/Gatewright.DataPlane/PolicyMiddleware.cs",
+          "line": 22,
+          "end_line": 60
+        },
+        {
+          "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
+          "line": 100,
+          "end_line": 104
+        }
+      ],
+      "row": 3,
+      "col": 3
+    },
+    {
+      "id": "redis",
+      "type": "database",
+      "label": "Redis",
+      "sublabel": "optional shared state",
+      "sources": [
+        {
+          "path": "src/Gatewright.State.Redis/RedisRateLimitStore.cs",
+          "line": 10,
+          "end_line": 60
+        },
+        {
+          "path": "src/Gatewright.State.Redis/RedisRevocationFeed.cs",
+          "line": 25,
+          "end_line": 43
+        },
+        {
+          "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
+          "line": 162,
+          "end_line": 167
+        }
+      ],
+      "row": 4,
+      "col": 3
+    },
+    {
+      "id": "backends",
+      "type": "external",
+      "label": "Backend pods",
+      "sublabel": "EndpointSlice addresses",
+      "row": 3,
+      "col": 4
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Control plane (Gateway:Mode=control-plane)",
+      "wraps": [
+        "adminapi",
+        "db",
+        "discovery",
+        "distserver"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "Data plane (Gateway:Mode=data-plane)",
+      "wraps": [
+        "dpclient",
+        "proxy"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "ops-portal",
+      "from": "operators",
+      "to": "portal",
+      "label": "browser, Entra ID"
+    },
+    {
+      "id": "ops-cli",
+      "from": "operators",
+      "to": "cli",
+      "label": "commands"
+    },
+    {
+      "id": "portal-admin",
+      "from": "portal",
+      "to": "adminapi",
+      "label": "REST /admin/v1"
+    },
+    {
+      "id": "cli-admin",
+      "from": "cli",
+      "to": "adminapi",
+      "label": "REST /admin/v1"
+    },
+    {
+      "id": "admin-db",
+      "from": "adminapi",
+      "to": "db",
+      "label": "revisions (EF Core)"
+    },
+    {
+      "id": "disc-watch",
+      "from": "discovery",
+      "to": "k8sapi",
+      "label": "watch"
+    },
+    {
+      "id": "disc-db",
+      "from": "discovery",
+      "to": "db",
+      "label": "save endpoints"
+    },
+    {
+      "id": "dist-db",
+      "from": "distserver",
+      "to": "db",
+      "label": "poll published"
+    },
+    {
+      "id": "dp-subscribe",
+      "from": "dpclient",
+      "to": "distserver",
+      "label": "gRPC Subscribe",
+      "variant": "emphasis"
+    },
+    {
+      "id": "apply-proxy",
+      "from": "dpclient",
+      "to": "proxy",
+      "label": "swap routes"
+    },
+    {
+      "id": "client-proxy",
+      "from": "clients",
+      "to": "proxy",
+      "label": "HTTP(S)",
+      "variant": "emphasis"
+    },
+    {
+      "id": "proxy-backend",
+      "from": "proxy",
+      "to": "backends",
+      "label": "forward",
+      "variant": "emphasis"
+    },
+    {
+      "id": "proxy-redis",
+      "from": "proxy",
+      "to": "redis",
+      "label": "batch tokens, revocations",
+      "variant": "dashed"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "cyan",
+      "title": "One binary, three modes",
+      "items": [
+        "Gateway:Mode selects all, control-plane or data-plane",
+        "all mode replaces gRPC with an in-process channel",
+        "all mode can also read a JSON config file instead of the database"
+      ]
+    },
+    {
+      "dot": "emerald",
+      "title": "Request path",
+      "items": [
+        "No Kubernetes, control-plane or database call per request",
+        "Without Redis, rate limits and revocations stay in memory"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "Security",
+      "items": [
+        "Admin API roles: Admin, Publisher, Reader",
+        "Only the control plane reads the Kubernetes API"
+      ]
+    }
+  ]
+}
