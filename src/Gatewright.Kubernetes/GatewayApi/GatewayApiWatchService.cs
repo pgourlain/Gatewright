@@ -22,6 +22,7 @@ public sealed partial class GatewayApiWatchService : BackgroundService
     private readonly GatewayApiReferences _references;
     private readonly KubernetesOptions _kubernetes;
     private readonly GatewayApiOptions _options;
+    private readonly RouteStatusWriter? _status;
     private readonly ILogger<GatewayApiWatchService> _logger;
 
     /// <summary>Initializes a new instance of the <see cref="GatewayApiWatchService"/> class.</summary>
@@ -32,6 +33,7 @@ public sealed partial class GatewayApiWatchService : BackgroundService
     /// <param name="kubernetes">The Kubernetes options.</param>
     /// <param name="options">The Gateway API options.</param>
     /// <param name="logger">The logger.</param>
+    /// <param name="status">Writes the outcome to the route status, when <c>GatewayApi:WriteStatus</c> is set.</param>
     public GatewayApiWatchService(
         IKubernetes client,
         ILeaderElection leader,
@@ -39,7 +41,8 @@ public sealed partial class GatewayApiWatchService : BackgroundService
         GatewayApiReferences references,
         IOptions<KubernetesOptions> kubernetes,
         IOptions<GatewayApiOptions> options,
-        ILogger<GatewayApiWatchService> logger)
+        ILogger<GatewayApiWatchService> logger,
+        RouteStatusWriter? status = null)
     {
         ArgumentNullException.ThrowIfNull(client);
         ArgumentNullException.ThrowIfNull(leader);
@@ -54,6 +57,7 @@ public sealed partial class GatewayApiWatchService : BackgroundService
         _references = references;
         _kubernetes = kubernetes.Value;
         _options = options.Value;
+        _status = options.Value.WriteStatus ? status : null;
         _logger = logger;
     }
 
@@ -156,7 +160,11 @@ public sealed partial class GatewayApiWatchService : BackgroundService
                 {
                     var routes = aggregator.Snapshot();
                     _references.Set(GatewayApiAggregator.ReferencedServices(routes));
-                    await _sink.ApplyAsync(new GatewayApiState(routes), cancellationToken).ConfigureAwait(false);
+                    var results = await _sink.ApplyAsync(new GatewayApiState(routes), cancellationToken).ConfigureAwait(false);
+                    if (_status is not null)
+                    {
+                        await _status.WriteAsync(results, aggregator.ServedGateways(), cancellationToken).ConfigureAwait(false);
+                    }
                 }
                 catch (Exception ex) when (ex is not OperationCanceledException)
                 {

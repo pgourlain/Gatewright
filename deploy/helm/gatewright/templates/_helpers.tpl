@@ -180,6 +180,18 @@ Control-plane-specific environment variables (database, Kubernetes discovery, au
   value: {{ .Values.controlPlane.seedSample | quote }}
 - name: Kubernetes__Enabled
   value: {{ .Values.kubernetes.enabled | quote }}
+{{- if and .Values.kubernetes.enabled .Values.gatewayApi.enabled }}
+- name: GatewayApi__Enabled
+  value: "true"
+- name: GatewayApi__GatewayClassName
+  value: {{ .Values.gatewayApi.gatewayClassName | quote }}
+- name: GatewayApi__WriteStatus
+  value: {{ .Values.gatewayApi.writeStatus | quote }}
+{{- range $index, $environment := .Values.gatewayApi.publishTo }}
+- name: GatewayApi__PublishTo__{{ $index }}
+  value: {{ $environment | quote }}
+{{- end }}
+{{- end }}
 {{- if or .Values.postgres.connectionString .Values.postgres.dev.enabled }}
 - name: ControlPlane__Provider
   value: "Postgres"

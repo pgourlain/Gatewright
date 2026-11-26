@@ -154,6 +154,16 @@ kubernetes:
   # Lets the control plane discover annotated Services/EndpointSlices and read referenced TLS secrets.
   enabled: true
 
+gatewayApi:
+  # Reads Gateway API HTTPRoute objects (gateway.networking.k8s.io/v1) and turns the routes attached to a Gateway of
+  # gatewayClassName into APIs (ADR 0017). Needs kubernetes.enabled and the Gateway API CRDs installed in the cluster.
+  enabled: false
+  gatewayClassName: gatewright
+  # Reports Accepted / gatewright.io/Configured on the route status. Adds the httproutes/status patch right.
+  writeStatus: false
+  # Environments a synchronized change is published to. Empty: a draft revision only, published from the portal or CLI.
+  publishTo: []
+
 rbac:
   # ClusterRole (Services, EndpointSlices, Secrets - cluster-wide, the discovery API has no narrower scope)
   # and a namespaced Role (Lease, for leader election) bound to the control plane's ServiceAccount only.

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- APIs synchronized from Gateway API are read-only in the Admin API (`409`), `POST /apis/{name}/detach` makes one manual, `GET /apis` shows their `source` and `hosts`; `GatewayApi:WriteStatus` reports `Accepted` and `gatewright.io/Configured` on the route status; Helm values `gatewayApi.*` add the matching RBAC only when enabled (#17.4)
 - Optional Kubernetes Gateway API source (`GatewayApi:Enabled`, `HTTPRoute` v1): routes attached to a Gateway of class `GatewayApi:GatewayClassName` become APIs, are updated when the route changes and are deleted, with safeguards, when it disappears; unsupported features are reported and the route is not applied (#17.2, #17.3)
 - Optional `hosts` on an API (route matching by host name, wildcards allowed; the same base path can be used on different hosts) and an API `source` marker; an API synchronized from Gateway API without a product, with an unknown product or without any policy answers `503` (`api-not-configured`) (#17.1)
 - The otel-gui sample shows how a client disconnect cancels slow backend work, with a correlated log and trace (#23).

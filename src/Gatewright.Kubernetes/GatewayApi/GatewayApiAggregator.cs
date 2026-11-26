@@ -81,6 +81,19 @@ public sealed class GatewayApiAggregator
         }
     }
 
+    /// <summary>Lists the Gateways of the served class, as <c>namespace/name</c>.</summary>
+    /// <returns>The Gateways.</returns>
+    public IReadOnlySet<string> ServedGateways()
+    {
+        lock (_gate)
+        {
+            return _gateways
+                .Where(g => string.Equals(g.Value.Spec?.GatewayClassName, _gatewayClassName, StringComparison.Ordinal))
+                .Select(g => g.Key)
+                .ToHashSet(StringComparer.Ordinal);
+        }
+    }
+
     /// <summary>Maps the routes that attach to a Gateway of the served class, ordered by reference.</summary>
     /// <returns>The mapped routes.</returns>
     public IReadOnlyList<GatewayApiRoute> Snapshot()

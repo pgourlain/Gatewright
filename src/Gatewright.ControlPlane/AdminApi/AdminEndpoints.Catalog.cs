@@ -34,7 +34,15 @@ public static partial class AdminEndpoints
         api.Backend,
         api.Policies,
         [.. api.Products.Select(p => p.Name).Order(StringComparer.Ordinal)],
-        [.. api.Operations.OrderBy(o => o.Name, StringComparer.Ordinal).Select(o => new OperationResponse(o.Name, o.Method, o.Path, o.Policies))]);
+        [.. api.Operations.OrderBy(o => o.Name, StringComparer.Ordinal).Select(o => new OperationResponse(o.Name, o.Method, o.Path, o.Policies))],
+        api.Hosts.Count == 0 ? null : [.. api.Hosts],
+        api.Source is null ? null : new ApiSourceResponse(api.Source, api.SourceRef ?? "", api.SourceProduct));
+
+    /// <summary>An API synchronized from Gateway API belongs to its route: the Admin API refuses to change it (ADR 0017) until it is detached.</summary>
+    private static IResult? ManagedByASource(ApiEntity api) =>
+        api.Source is null
+            ? null
+            : RequestValidation.Conflict($"API '{api.Name}' is managed by {api.Source} ({api.SourceRef}) and is read-only. Change the source object, or detach the API first (POST /apis/{api.Name}/detach).");
 
     private static void MapApis(RouteGroupBuilder group)
     {
@@ -136,6 +144,11 @@ public static partial class AdminEndpoints
                 return RequestValidation.NotFound("API", name);
             }
 
+            if (ManagedByASource(api) is { } managed)
+            {
+                return managed;
+            }
+
             var products = await ResolveProductsAsync(db, request.Products, ct);
             if (products is null)
             {
@@ -161,9 +174,43 @@ public static partial class AdminEndpoints
                 return RequestValidation.NotFound("API", name);
             }
 
+            if (ManagedByASource(api) is { } managed)
+            {
+                return managed;
+            }
+
             db.Apis.Remove(api);
             await recorder.CommitAsync("api.delete", "api", name, ct);
             return Results.NoContent();
+        }).RequireAuthorization(AdminRoles.AdminPolicy);
+
+        group.MapPost("/apis/{name}/detach", async (string name, GatewrightDbContext db, ChangeRecorder recorder, CancellationToken ct) =>
+        {
+            var api = await ApisWithChildren(db).FirstOrDefaultAsync(a => a.Name == name, ct);
+            if (api is null)
+            {
+                return RequestValidation.NotFound("API", name);
+            }
+
+            if (api.Source is null)
+            {
+                return RequestValidation.Conflict($"API '{name}' is not managed by a source.");
+            }
+
+            // The requested product becomes a real link, so the policies the API inherits keep applying.
+            if (api.SourceProduct is not null && await db.Products.FirstOrDefaultAsync(p => p.Name == api.SourceProduct, ct) is { } product && !api.Products.Contains(product))
+            {
+                api.Products.Add(product);
+            }
+
+            api.Source = null;
+            api.SourceRef = null;
+            api.SourceUid = null;
+            api.SourceProduct = null;
+            api.SourceGeneration = null;
+            api.SourceMissingCount = 0;
+            await recorder.CommitAsync("api.detach", "api", name, ct);
+            return Results.Ok(ToResponse(api));
         }).RequireAuthorization(AdminRoles.AdminPolicy);
 
         group.MapGet("/apis/{api}/operations", async (string api, GatewrightDbContext db, CancellationToken ct) =>
@@ -197,6 +244,11 @@ public static partial class AdminEndpoints
                 return RequestValidation.NotFound("API", api);
             }
 
+            if (ManagedByASource(owner) is { } managed)
+            {
+                return managed;
+            }
+
             var operation = owner.Operations.FirstOrDefault(o => o.Name == name);
             var created = operation is null;
             if (operation is null)
@@ -219,6 +271,11 @@ public static partial class AdminEndpoints
             if (operation is null)
             {
                 return RequestValidation.NotFound("Operation", $"{api}/{name}");
+            }
+
+            if (await db.Apis.FirstAsync(a => a.Id == operation.ApiId, ct) is { Source: not null } owner)
+            {
+                return ManagedByASource(owner)!;
             }
 
             db.Operations.Remove(operation);

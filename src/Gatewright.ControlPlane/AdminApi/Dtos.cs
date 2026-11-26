@@ -39,6 +39,8 @@ public sealed record ApiRequest
 /// <param name="Policies">The API-scope policies.</param>
 /// <param name="Products">The product names.</param>
 /// <param name="Operations">The operations.</param>
+/// <param name="Hosts">The host names the API answers to, or <see langword="null"/> for any host.</param>
+/// <param name="Source">Where the API comes from, or <see langword="null"/> for an API declared by hand.</param>
 public sealed record ApiResponse(
     string Name,
     string? DisplayName,
@@ -47,7 +49,15 @@ public sealed record ApiResponse(
     BackendDefinition Backend,
     PolicySet Policies,
     IReadOnlyList<string> Products,
-    IReadOnlyList<OperationResponse> Operations);
+    IReadOnlyList<OperationResponse> Operations,
+    IReadOnlyList<string>? Hosts = null,
+    ApiSourceResponse? Source = null);
+
+/// <summary>Where an API comes from when it is synchronized from a Kubernetes Gateway API route; such an API is read-only until detached.</summary>
+/// <param name="Kind">The kind of source, <c>gatewayapi</c>.</param>
+/// <param name="Ref">The reference of the source object, <c>namespace/name</c>.</param>
+/// <param name="Product">The product requested by the source object.</param>
+public sealed record ApiSourceResponse(string Kind, string Ref, string? Product);
 
 /// <summary>Body to create or replace an operation.</summary>
 public sealed record OperationRequest

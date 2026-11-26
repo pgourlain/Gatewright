@@ -75,6 +75,11 @@ public sealed class ApiImportService
 
         var existing = await _db.Apis.Include(a => a.Operations).Include(a => a.Products).AsSplitQuery()
             .FirstOrDefaultAsync(a => a.Name == api.Name, cancellationToken).ConfigureAwait(false);
+        if (existing is { Source: not null })
+        {
+            return new ApiImportReport(api.Name, false, false, [], [], [], [], 0, read.Warnings, [$"API '{api.Name}' is managed by {existing.Source} ({existing.SourceRef}); detach it before importing over it."]);
+        }
+
         var created = existing is null;
         var apiChanges = new List<string>();
         var added = new List<string>();

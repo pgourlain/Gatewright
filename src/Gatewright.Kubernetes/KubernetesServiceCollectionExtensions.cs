@@ -44,6 +44,12 @@ public static class KubernetesServiceCollectionExtensions
         if (configuration.GetSection(GatewayApi.GatewayApiOptions.SectionName).GetValue<bool>(nameof(GatewayApi.GatewayApiOptions.Enabled)))
         {
             services.Configure<GatewayApi.GatewayApiOptions>(configuration.GetSection(GatewayApi.GatewayApiOptions.SectionName));
+            if (configuration.GetSection(GatewayApi.GatewayApiOptions.SectionName).GetValue<bool>(nameof(GatewayApi.GatewayApiOptions.WriteStatus)))
+            {
+                services.TryAddSingleton(TimeProvider.System);
+                services.AddSingleton<GatewayApi.RouteStatusWriter>();
+            }
+
             services.AddHostedService<GatewayApi.GatewayApiWatchService>();
         }
 

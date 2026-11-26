@@ -265,4 +265,34 @@ public sealed class GatewayApiSynchronizerTests : IDisposable
         result.Message.ShouldContain("filters");
         (await ApisAsync()).ShouldHaveSingleItem().SourceGeneration.ShouldBe(1);
     }
+
+    [Fact]
+    public async Task Apply_WithWriteStatus_ReportsWhyAnAcceptedApiIsBlocked()
+    {
+        await using (var db = _database.CreateContext())
+        {
+            db.Products.Add(new ProductEntity { Name = "empty" });
+            await db.SaveChangesAsync();
+        }
+
+        var options = new GatewayApiSyncOptions { Enabled = true, WriteStatus = true };
+        var results = await Synchronizer(options).ApplyAsync(
+            State(Route("none", basePath: "/none", product: null), Route("ghost", basePath: "/ghost", product: "nope"), Route("bare", basePath: "/bare", product: "empty")),
+            CancellationToken.None);
+
+        results.Select(r => (r.Ref, r.Accepted, r.BlockedReason)).ShouldBe(
+        [
+            ("shop/none", true, "MissingProduct"),
+            ("shop/ghost", true, "ProductNotFound"),
+            ("shop/bare", true, "NoPolicy"),
+        ]);
+    }
+
+    [Fact]
+    public async Task Apply_WithoutWriteStatus_DoesNotComputeBlockedReasons()
+    {
+        var results = await Synchronizer().ApplyAsync(State(Route("none", product: null)), CancellationToken.None);
+
+        results.ShouldHaveSingleItem().BlockedReason.ShouldBeNull();
+    }
 }

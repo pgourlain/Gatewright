@@ -7,6 +7,7 @@ using Gatewright.ControlPlane.Domain;
 using Gatewright.ControlPlane.Revisions;
 using Gatewright.Core.Configuration;
 using Gatewright.Core.Discovery;
+using Gatewright.Core.Snapshots;
 using Gatewright.Core.Validation;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -98,7 +99,7 @@ public sealed partial class GatewayApiSynchronizer : IGatewayApiSink
         if (changes.Count == 0)
         {
             await db.SaveChangesAsync(cancellationToken).ConfigureAwait(false);
-            return results;
+            return await WithBlockedReasonsAsync(scope, results, cancellationToken).ConfigureAwait(false);
         }
 
         var revision = await scope.ServiceProvider.GetRequiredService<ChangeRecorder>()
@@ -114,7 +115,24 @@ public sealed partial class GatewayApiSynchronizer : IGatewayApiSink
         }
 
         LogSynchronized(_logger, changes.Count, revision.Number);
-        return results;
+        return await WithBlockedReasonsAsync(scope, results, cancellationToken).ConfigureAwait(false);
+    }
+
+    private async Task<IReadOnlyList<GatewayApiRouteResult>> WithBlockedReasonsAsync(IServiceScope scope, List<GatewayApiRouteResult> results, CancellationToken cancellationToken)
+    {
+        if (!_options.WriteStatus)
+        {
+            return results;
+        }
+
+        var config = await scope.ServiceProvider.GetRequiredService<ConfigExporter>().ExportAsync(cancellationToken).ConfigureAwait(false);
+        var apis = config.Apis.Where(a => a.Source?.Kind == ApiSource.GatewayApi).ToDictionary(a => a.Source!.Ref, StringComparer.Ordinal);
+        return
+        [
+            .. results.Select(r => r.Accepted && apis.TryGetValue(r.Ref, out var api)
+                ? r with { BlockedReason = SnapshotTranslator.BlockReason(config, api) }
+                : r),
+        ];
     }
 
     private static ApiEntity? FindConflict(List<ApiEntity> all, ApiEntity? self, ApiDefinition api)

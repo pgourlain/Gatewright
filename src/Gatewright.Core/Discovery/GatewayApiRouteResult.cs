@@ -8,4 +8,5 @@ namespace Gatewright.Core.Discovery;
 /// <param name="Accepted">Whether the route is applied.</param>
 /// <param name="Reason">A short reason in the Gateway API vocabulary, such as <c>Accepted</c>, <c>UnsupportedValue</c> or <c>PathConflict</c>.</param>
 /// <param name="Message">A human readable explanation.</param>
-public sealed record GatewayApiRouteResult(string Ref, bool Accepted, string Reason, string Message);
+/// <param name="BlockedReason">Why the API answers <c>503</c> although the route is accepted (<c>MissingProduct</c>, <c>ProductNotFound</c>, <c>NoPolicy</c>), or <see langword="null"/> when it serves. Only filled when the status is written.</param>
+public sealed record GatewayApiRouteResult(string Ref, bool Accepted, string Reason, string Message, string? BlockedReason = null);
