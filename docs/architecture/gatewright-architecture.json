@@ -3,14 +3,14 @@
   "diagram_type": "architecture",
   "meta": {
     "title": "Gatewright architecture (control-plane / data-plane split)",
-    "output": ".archify/architecture-gatewright-20261126-180310/gatewright.html",
+    "output": ".archify/architecture-gatewright-20261126-192504/gatewright.html",
     "quality_profile": "showcase",
     "locale": "en",
     "repository": {
       "url": "https://github.com/pgourlain/Gatewright.git",
       "provider": "github",
       "link_mode": "web",
-      "revision": "b76f26c1e7b292f1e8f9e54b594b5b49f73541d7"
+      "revision": "94f7beccdb9d8c8ac0a857a1ec4e09d9426bd9c1"
     }
   },
   "layout": {
@@ -75,9 +75,9 @@
           "end_line": 80
         },
         {
-          "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
-          "line": 169,
-          "end_line": 188
+          "path": "src/Gatewright.ControlPlane/AdminApi/AdminEndpoints.Catalog.cs",
+          "line": 41,
+          "end_line": 46
         }
       ],
       "row": 0,
@@ -91,8 +91,8 @@
       "sources": [
         {
           "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
-          "line": 172,
-          "end_line": 183
+          "line": 174,
+          "end_line": 185
         }
       ],
       "row": 0,
@@ -102,7 +102,7 @@
       "id": "k8sapi",
       "type": "cloud",
       "label": "Kubernetes API",
-      "sublabel": "Services, EndpointSlices",
+      "sublabel": "Services, HTTPRoutes",
       "row": 0,
       "col": 5
     },
@@ -115,13 +115,13 @@
       "sources": [
         {
           "path": "src/Gatewright.Kubernetes/KubernetesDiscoveryService.cs",
-          "line": 93,
-          "end_line": 128
+          "line": 103,
+          "end_line": 123
         },
         {
           "path": "src/Gatewright.Kubernetes/KubernetesServiceCollectionExtensions.cs",
           "line": 39,
-          "end_line": 42
+          "end_line": 43
         }
       ],
       "row": 0,
@@ -199,8 +199,13 @@
         },
         {
           "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
-          "line": 100,
-          "end_line": 104
+          "line": 102,
+          "end_line": 106
+        },
+        {
+          "path": "src/Gatewright.Core/Snapshots/BlockedApiPolicy.cs",
+          "line": 12,
+          "end_line": 40
         }
       ],
       "row": 3,
@@ -224,8 +229,8 @@
         },
         {
           "path": "src/Gatewright.Sdk/Internal/GatewrightServiceCollectionExtensions.cs",
-          "line": 162,
-          "end_line": 167
+          "line": 164,
+          "end_line": 169
         }
       ],
       "row": 4,
@@ -238,6 +243,41 @@
       "sublabel": "EndpointSlice addresses",
       "row": 3,
       "col": 4
+    },
+    {
+      "id": "gwsource",
+      "type": "backend",
+      "label": "Gateway API source",
+      "sublabel": "HTTPRoute to API, optional",
+      "tag": "control plane",
+      "explanation": "Off by default (GatewayApi:Enabled). On the leader, it watches Gateway and HTTPRoute objects, maps the routes attached to a Gateway of the served class to APIs and reconciles the database in one revision per cycle. Unsupported routes are reported, not applied.",
+      "row": 1,
+      "col": 4,
+      "sources": [
+        {
+          "path": "src/Gatewright.Kubernetes/GatewayApi/GatewayApiWatchService.cs",
+          "line": 91,
+          "end_line": 139
+        },
+        {
+          "path": "src/Gatewright.Kubernetes/GatewayApi/HttpRouteMapper.cs",
+          "line": 30,
+          "end_line": 84
+        },
+        {
+          "path": "src/Gatewright.ControlPlane/Distribution/GatewayApiSynchronizer.cs",
+          "line": 46,
+          "end_line": 120
+        }
+      ]
+    },
+    {
+      "id": "teams",
+      "type": "external",
+      "label": "App teams",
+      "sublabel": "kubectl, GitOps",
+      "row": 1,
+      "col": 5
     }
   ],
   "boundaries": [
@@ -248,7 +288,8 @@
         "adminapi",
         "db",
         "discovery",
-        "distserver"
+        "distserver",
+        "gwsource"
       ]
     },
     {
@@ -342,6 +383,26 @@
       "to": "redis",
       "label": "batch tokens, revocations",
       "variant": "dashed"
+    },
+    {
+      "id": "teams-routes",
+      "from": "teams",
+      "to": "k8sapi",
+      "label": "apply HTTPRoute"
+    },
+    {
+      "id": "gw-watch",
+      "from": "gwsource",
+      "to": "k8sapi",
+      "label": "watch routes, write status",
+      "variant": "dashed"
+    },
+    {
+      "id": "gw-db",
+      "from": "gwsource",
+      "to": "db",
+      "label": "sync APIs (revision)",
+      "variant": "dashed"
     }
   ],
   "cards": [
@@ -368,6 +429,15 @@
       "items": [
         "Admin API roles: Admin, Publisher, Reader",
         "Only the control plane reads the Kubernetes API"
+      ]
+    },
+    {
+      "dot": "amber",
+      "title": "Gateway API (optional)",
+      "items": [
+        "Routes of a Gateway of class gatewright become APIs",
+        "No product or policy: the API answers 503 api-not-configured",
+        "Such an API is read-only in the Admin API until detached"
       ]
     }
   ]
