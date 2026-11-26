@@ -117,6 +117,41 @@ public sealed class HostModeTests
     }
 
     [Fact]
+    public async Task Request_ApiFromGatewayApiWithoutProduct_AnswersBlocked503WithoutRevealingTheReason()
+    {
+        var directory = Directory.CreateTempSubdirectory("gatewright-blocked-").FullName;
+        try
+        {
+            var config = Path.Combine(directory, "config.json");
+            await File.WriteAllTextAsync(config, """
+                {"version":1,"apis":[{"name":"orders","basePath":"/orders","backend":{"destinations":["http://127.0.0.1:1"]},
+                 "source":{"kind":"gatewayapi","ref":"shop/orders"}}]}
+                """);
+            await using var factory = Create(("Gateway:Mode", "All"), ("Gateway:ConfigFile", config), ("Gateway:ConfigPollInterval", "00:00:00.100"));
+            using var client = factory.CreateClient();
+            var deadline = DateTime.UtcNow.AddSeconds(5);
+            HttpResponseMessage response;
+            while ((response = await client.GetAsync("/orders/1")).StatusCode == System.Net.HttpStatusCode.NotFound && DateTime.UtcNow < deadline)
+            {
+                await Task.Delay(50);
+            }
+
+            response.StatusCode.ShouldBe(System.Net.HttpStatusCode.ServiceUnavailable);
+            response.Content.Headers.ContentType!.MediaType.ShouldBe("application/problem+json");
+            var body = await response.Content.ReadAsStringAsync();
+            using var json = System.Text.Json.JsonDocument.Parse(body);
+            json.RootElement.GetProperty("type").GetString().ShouldBe("api-not-configured");
+            json.RootElement.GetProperty("instance").GetString().ShouldNotBeNullOrEmpty();
+            body.ShouldNotContain("MissingProduct");
+            body.ShouldNotContain("shop/orders");
+        }
+        finally
+        {
+            Directory.Delete(directory, recursive: true);
+        }
+    }
+
+    [Fact]
     public async Task Readyz_TurnsToFailingAsSoonAsShutdownStarts()
     {
         var directory = Directory.CreateTempSubdirectory("gatewright-ready-").FullName;

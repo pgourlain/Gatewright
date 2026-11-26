@@ -237,6 +237,10 @@ public sealed class ConfigPorter
                 Version = definition.Version,
                 Backend = definition.Backend,
                 Policies = definition.Policies,
+                Hosts = [.. definition.Hosts ?? []],
+                Source = definition.Source?.Kind,
+                SourceRef = definition.Source?.Ref,
+                SourceProduct = definition.Source?.Product,
             };
             _db.Apis.Add(api);
             foreach (var productName in definition.Products)

@@ -4,6 +4,7 @@
 using Gatewright.ControlPlane.Domain;
 using Gatewright.Core.Configuration;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Gatewright.ControlPlane.Data;
@@ -98,6 +99,15 @@ public sealed class GatewrightDbContext : DbContext
         {
             b.HasIndex(a => a.Name).IsUnique();
             b.Property(a => a.Name).HasMaxLength(128);
+            b.Property(a => a.Source).HasMaxLength(32);
+            b.Property(a => a.SourceRef).HasMaxLength(512);
+            b.Property(a => a.SourceUid).HasMaxLength(64);
+            b.Property(a => a.SourceProduct).HasMaxLength(128);
+            b.HasIndex(a => new { a.Source, a.SourceRef });
+            b.Property(a => a.Hosts).HasConversion(
+                v => string.Join(',', v),
+                v => v.Length == 0 ? new List<string>() : v.Split(',', StringSplitOptions.RemoveEmptyEntries).ToList(),
+                new ValueComparer<List<string>>((a, c) => a!.SequenceEqual(c!), v => v.Aggregate(0, (h, x) => HashCode.Combine(h, x.GetHashCode())), v => v.ToList()));
             b.HasMany(a => a.Operations).WithOne().HasForeignKey(o => o.ApiId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(a => a.Products).WithMany(p => p.Apis).UsingEntity("ProductApi");
         });

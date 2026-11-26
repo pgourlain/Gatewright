@@ -58,4 +58,31 @@ public sealed class ConfigExporterTests
         Gatewright.Core.Configuration.GatewayConfigSerializer.Serialize(first)
             .ShouldBe(Gatewright.Core.Configuration.GatewayConfigSerializer.Serialize(second));
     }
+
+    [Fact]
+    public async Task Export_ApiFromGatewayApi_ResolvesTheRequestedProductAndCarriesTheSource()
+    {
+        using var h = new RevisionTestHarness();
+        var product = new ProductEntity { Name = "payments" };
+        h.Db.Products.Add(product);
+        var found = h.AddApi("orders");
+        found.Source = "gatewayapi";
+        found.SourceRef = "shop/orders";
+        found.SourceProduct = "payments";
+        found.Hosts = ["api.acme.com"];
+        var missing = h.AddApi("billing");
+        missing.Source = "gatewayapi";
+        missing.SourceRef = "shop/billing";
+        missing.SourceProduct = "nope";
+        await h.Db.SaveChangesAsync();
+
+        var config = await new ConfigExporter(h.Db).ExportAsync(CancellationToken.None);
+
+        var orders = config.Apis.Single(a => a.Name == "orders");
+        orders.Products.ShouldBe(["payments"]);
+        orders.Hosts.ShouldBe(["api.acme.com"]);
+        orders.Source!.Ref.ShouldBe("shop/orders");
+        orders.Source.Product.ShouldBe("payments");
+        config.Apis.Single(a => a.Name == "billing").Products.ShouldBeEmpty();
+    }
 }

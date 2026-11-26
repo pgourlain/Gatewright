@@ -81,7 +81,12 @@ public sealed class ConfigExporter
                     Version = a.Version,
                     Backend = a.Backend,
                     Policies = a.Policies,
-                    Products = [.. a.Products.Select(p => p.Name).Order(StringComparer.Ordinal)],
+                    Hosts = a.Hosts.Count == 0 ? null : [.. a.Hosts],
+                    Source = a.Source is null ? null : new ApiSource { Kind = a.Source, Ref = a.SourceRef ?? "", Product = a.SourceProduct },
+                    Products = a.Source is null
+                        ? [.. a.Products.Select(p => p.Name).Order(StringComparer.Ordinal)]
+                        // The requested product is resolved here, so that an unknown name never makes the configuration invalid and the API unblocks itself once the product exists.
+                        : [.. products.Where(p => p.Name == a.SourceProduct).Select(p => p.Name)],
                     Operations =
                     [
                         .. a.Operations.OrderBy(o => o.Name, StringComparer.Ordinal).Select(o => new OperationDefinition

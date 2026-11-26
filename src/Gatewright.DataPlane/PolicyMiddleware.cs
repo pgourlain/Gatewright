@@ -113,6 +113,12 @@ public sealed partial class PolicyMiddleware
         var result = await routePipeline.Pipeline.ExecuteAsync(context, PolicyPhase.Inbound).ConfigureAwait(false);
         if (result.Kind != PolicyResultKind.Continue)
         {
+            if (result.Code == BlockedApiPolicy.Code)
+            {
+                var reason = context.Variables.TryGetValue(BlockedApiPolicy.ReasonVariable, out var blocked) ? blocked as string : null;
+                LogBlockedApi(_logger, routeId, reason ?? "Unknown", RequestId(httpContext));
+            }
+
             AddTraceHeader(httpContext, trace);
             await WriteResultAsync(httpContext, result).ConfigureAwait(false);
             return;
@@ -253,8 +259,20 @@ public sealed partial class PolicyMiddleware
         writer.WriteString("type", result.Code);
         writer.WriteString("title", result.Message);
         writer.WriteNumber("status", result.StatusCode);
+        if (result.Code == BlockedApiPolicy.Code)
+        {
+            // Lets the caller quote an identifier; the reason itself stays in the logs (ADR 0017).
+            writer.WriteString("instance", RequestId(httpContext));
+        }
+
         writer.WriteEndObject();
     }
+
+    private static string RequestId(HttpContext httpContext) =>
+        System.Diagnostics.Activity.Current?.TraceId.ToString() ?? httpContext.TraceIdentifier;
+
+    [LoggerMessage(Level = LogLevel.Warning, Message = "Route {RouteId} is blocked ({Reason}): its API is not configured completely. Request {RequestId}.")]
+    private static partial void LogBlockedApi(ILogger logger, string routeId, string reason, string requestId);
 
     [LoggerMessage(Level = LogLevel.Error, Message = "No policy pipeline found for route {RouteId}.")]
     private static partial void LogMissingPipeline(ILogger logger, string routeId);

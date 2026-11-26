@@ -73,7 +73,7 @@ public sealed class SnapshotTranslator
 
             if (api.Operations.Count == 0)
             {
-                AddRoute(routes, pipelines, api, null, apiInfo, null, $"{basePath}/{{**remainder}}", null, compiledByKey[(api.Name, null)]);
+                AddRoute(routes, pipelines, config, api, null, apiInfo, null, $"{basePath}/{{**remainder}}", null, compiledByKey[(api.Name, null)]);
                 continue;
             }
 
@@ -81,7 +81,7 @@ public sealed class SnapshotTranslator
             {
                 var opInfo = new OperationInfo(operation.Name, operation.Method.ToUpperInvariant(), operation.Path);
                 var path = operation.Path == "/" ? (basePath.Length == 0 ? "/" : basePath) : basePath + operation.Path.TrimEnd('/');
-                AddRoute(routes, pipelines, api, operation, apiInfo, opInfo, path, [opInfo.Method], compiledByKey[(api.Name, operation.Name)]);
+                AddRoute(routes, pipelines, config, api, operation, apiInfo, opInfo, path, [opInfo.Method], compiledByKey[(api.Name, operation.Name)]);
             }
         }
 
@@ -90,11 +90,36 @@ public sealed class SnapshotTranslator
         return new SnapshotTranslationResult(snapshot, []);
     }
 
+    /// <summary>Tells why an API synchronized from Gateway API must be blocked (fail closed, ADR 0017), or <see langword="null"/> when it can serve.</summary>
+    private static string? BlockReason(GatewayConfig config, ApiDefinition api)
+    {
+        if (api.Source is not { Kind: ApiSource.GatewayApi } source)
+        {
+            return null;
+        }
+
+        if (string.IsNullOrEmpty(source.Product))
+        {
+            return "MissingProduct";
+        }
+
+        var product = config.Products.FirstOrDefault(p => string.Equals(p.Name, source.Product, StringComparison.Ordinal));
+        if (product is null)
+        {
+            return "ProductNotFound";
+        }
+
+        return HasPolicies(product.Policies) || HasPolicies(api.Policies) || api.Operations.Any(o => HasPolicies(o.Policies)) ? null : "NoPolicy";
+    }
+
+    private static bool HasPolicies(PolicySet set) => set.Inbound.Count + set.Backend.Count + set.Outbound.Count + set.OnError.Count > 0;
+
     private static string TrimBasePath(string basePath) => basePath.TrimEnd('/');
 
     private void AddRoute(
         List<RouteConfig> routes,
         Dictionary<string, RoutePipeline> pipelines,
+        GatewayConfig config,
         ApiDefinition api,
         OperationDefinition? operation,
         ApiInfo apiInfo,
@@ -121,12 +146,15 @@ public sealed class SnapshotTranslator
         {
             RouteId = routeId,
             ClusterId = api.Name,
-            Match = new RouteMatch { Path = path, Methods = methods },
+            Match = new RouteMatch { Path = path, Methods = methods, Hosts = api.Hosts is { Count: > 0 } hosts ? [.. hosts] : null },
             Metadata = metadata,
             Transforms = transforms,
         });
 
-        pipelines[routeId] = new RoutePipeline(routeId, apiInfo, opInfo, new PolicyPipeline(compiled.Chains, _pipelineOptions));
+        var chains = BlockReason(config, api) is { } reason
+            ? new Dictionary<PolicyPhase, IReadOnlyList<CompiledPolicy>> { [PolicyPhase.Inbound] = [new CompiledPolicy("blocked", new BlockedApiPolicy(reason))] }
+            : compiled.Chains;
+        pipelines[routeId] = new RoutePipeline(routeId, apiInfo, opInfo, new PolicyPipeline(chains, _pipelineOptions));
     }
 
     private static HealthCheckConfig? CreateHealthCheck(BackendDefinition backend)

@@ -9,6 +9,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- Optional `hosts` on an API (route matching by host name, wildcards allowed; the same base path can be used on different hosts) and an API `source` marker; an API synchronized from Gateway API without a product, with an unknown product or without any policy answers `503` (`api-not-configured`) (#17.1)
 - The otel-gui sample shows how a client disconnect cancels slow backend work, with a correlated log and trace (#23).
 - Helm repository on GitHub Pages (`helm repo add gatewright https://pgourlain.github.io/Gatewright`), updated by each release, so the quickstart needs no clone
 - Initial project structure, MIT license and governance files (#0)

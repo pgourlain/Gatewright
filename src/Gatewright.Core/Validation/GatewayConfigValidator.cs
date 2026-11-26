@@ -52,6 +52,9 @@ public sealed partial class GatewayConfigValidator
         return errors;
     }
 
+    private static string HostKey(ApiDefinition api) =>
+        api.Hosts is { Count: > 0 } hosts ? string.Join(',', hosts.Select(h => h.ToLowerInvariant()).Order(StringComparer.Ordinal)) : "*";
+
     private static string NormalizePath(string path)
     {
         var trimmed = path.Trim().TrimEnd('/');
@@ -173,7 +176,7 @@ public sealed partial class GatewayConfigValidator
             }
             else
             {
-                var key = NormalizePath(api.BasePath);
+                var key = HostKey(api) + "|" + NormalizePath(api.BasePath);
                 if (basePaths.TryGetValue(key, out var other))
                 {
                     Add(errors, "api.path-conflict", path + ".basePath", $"Base path '{api.BasePath}' conflicts with API '{other}'.");
@@ -181,6 +184,14 @@ public sealed partial class GatewayConfigValidator
                 else
                 {
                     basePaths[key] = api.Name;
+                }
+            }
+
+            foreach (var host in api.Hosts ?? [])
+            {
+                if (!HostnameRegex().IsMatch(host ?? ""))
+                {
+                    Add(errors, "api.host-invalid", path + ".hosts", $"Host '{host}' must be a DNS name, a wildcard such as '*.example.com', or '*'.");
                 }
             }
 
